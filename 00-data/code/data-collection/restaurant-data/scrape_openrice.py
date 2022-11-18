@@ -13,7 +13,6 @@ from datetime import datetime
 
 # scprape the yellow businesses
 # there's a total of 130 pages in the crowdsourced account
-# remember to use VPN when using Chrome Driver to avoid IP address being blocked
 # provide the root url
 URL = 'https://www.openrice.com/zh/gourmet/bookmarkrestaurant.htm?userid=66275053&city=hongkong&bpcatId=880470&page'
 # initialize an empty list
