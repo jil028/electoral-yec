@@ -1,0 +1,109 @@
+---
+title: "Visualization in the Background and Methods Chapter"
+author: "Jiayi Li"
+date: "2022-11-18"
+output: html_document
+---
+Purpose: to clean data and create figures in the background and methods sections of the partial thesis.
+
+# load packages
+
+```{r}
+library(readxl)
+library(tidyverse)
+library(vistime)
+library(modelsummary)
+library(kableExtra)
+library(glue)
+
+source_dir <- "enter data source directory"
+```
+
+# figure 1: democracy index
+# source of data: The Economic Intelligence Unit (https://info.worldbank.org/governance/wgi/Home/downLoadFile?fileName=EIU.xlsx)
+```{r}
+##############
+## Figure 1 ##
+##############
+
+# load raw data 
+raw_eiu_dem_index <-
+  read_excel("/Users/jiayili/Dropbox/Mac/Downloads/EIU.xlsx", sheet = 2)
+
+# clean data 
+hk_dem_index_raw <-
+  raw_eiu_dem_index %>%
+  # subset to only include data for hong kong
+  filter(country == "Hong Kong SAR, China") %>%
+  mutate_all(as.character) %>%
+  # reshape data
+  pivot_longer(
+    cols = starts_with("EIU"),
+    values_to = "value"
+  ) %>%
+  # subset to only include indexes for `voice and accountability`
+  filter(str_detect(name, "VA")) %>%
+  mutate(
+    # create a four-digits year variable
+    year_2dig = substr(name, 4, 5),
+    year_4dig = 
+      case_when(
+        str_detect(year_2dig, "^9") ~ paste0("19", year_2dig),
+        TRUE ~ paste0("20", year_2dig)
+      )
+  )
+
+plt_dem_index <- 
+  hk_dem_index_raw %>%
+  ggplot(aes(x = as.numeric(year_4dig), y = as.numeric(value), group = 1)) +
+  geom_line() +
+  geom_point() +
+  geom_vline(xintercept = 1997, linetype = 2, color = "coral3") +
+  annotate("text", x = 2002.5, y = 0.7, 
+           label = "1997: Handover of Hong Kong",
+           colour = "coral3") +
+  geom_vline(xintercept = 2014, linetype = 2, color = "coral3") +
+  annotate("text", x = 2010, y = 0.55, 
+           label = "2014: Umbrella Movement",
+           colour = "coral3") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust = 1, size = 12),
+        axis.text.y = element_text(size = 12),
+        axis.title.y = element_text(size = 12)
+  ) +
+  xlab(" ") +
+  ylab("Voice and Accountability Index")
+```
+
+# figure 4: time of the development of the YEC
+
+```{r}
+##############
+## Figure 4 ##
+##############
+
+# create a tibble for event data
+df_timeline_2019 <-
+  tribble(
+    ~start_date, ~event, ~type, ~end_date,
+    "2019-03-15", "Beginning of the Anti-ELAB Movement", "Sit-in protests", NA_character_,
+    "2019-06-09", "Escalation of protests", "Massive gatherings", "2019-12-31",
+    "2019-07-01", "The firing of the Yoshinoya staff", "Development of the YEC", NA_character_,
+    "2019-10-10", '"Day of Thanks"', "Development of the YEC", NA_character_,
+    "2019-10-26", '"Shopping Spree Day"', "Development of the YEC", NA_character_,
+    "2019-11-24", "District Council Election", "Election", "2019-11-24"
+  )
+
+timeline_2019 <-
+  gg_vistime(df_timeline_2019, col.event = "event", 
+             col.group = "type", optimize_y = F,
+             col.start = "start_date", col.end = "end_date", 
+             show_labels = FALSE) +
+  theme(axis.text.y = element_text(size = 12),
+        axis.text.x = element_text(size = 12)) +
+  geom_text_repel(data=p$layers[[3]]$data,
+                  label=p$layers[[3]]$data$label, 
+                  size = 4, 
+                  color="black")
+```
+
