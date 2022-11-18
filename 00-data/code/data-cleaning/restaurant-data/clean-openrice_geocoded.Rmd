@@ -1,0 +1,103 @@
+---
+title: "Clean OpenRice (geocoded)"
+author: "Jiayi Li"
+date: '2022-08-09'
+output: html_document
+---
+Purpose: to clean the geocoded OpenRice data
+To-Do:
+ - 08/09
+ -- Break the `gmaps_coords` columns in to lat and lon
+ -- Check bad coordinates
+ -- Save a version for hand geocoding
+ 
+```{r setup, include=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# load packages and data
+
+```{r}
+library(glue)
+  path <- "/Users/jiayili/Dropbox/senior-thesis/01-code/"
+# load packages
+  source(glue("{path}helper-packages.R"))
+  
+# load raw openrice data (geocoded)
+  path_dat <- "/Users/jiayili/Dropbox/senior-thesis/00-data/00-raw-data/restaurant-data/working-data/openrice/"
+  
+  openrice_raw_geocoded <-
+    read.csv(glue("{path_dat}geocoded_openrice.csv")) %>%
+    # drop the index column
+    select(-1)
+```
+
+# clean and save a version for hand geocoding
+
+```{r}
+# clean 
+  openrice_hand_geocoding <-
+    openrice_raw_geocoded %>%
+    mutate(
+      # remove brackets in the `gmaps_coords` column
+      gmaps_coords = str_replace_all(gmaps_coords, "\\[|\\]", "")
+    ) %>%
+    # separate the `gmaps_coords` column into two: lat and lon
+    separate(gmaps_coords, into = c("lat", "lon"), sep = ",", remove = F) %>%
+    # check for bad coordinates
+    # Hong Kong SAR lies between Latitude 22°08' North and 22°35' North, Longitude 113°49' East and 114°31' East.
+    mutate(
+      bad_coords =
+        case_when(
+          as.numeric(lat) < 22|as.numeric(lat) > 23|as.numeric(lon) < 113|as.numeric(lon) > 115 ~ "bad",
+          TRUE ~ "good"
+        )
+    ) %>%
+  # drop the `bad_name` column
+  select(-bad_names)
+```
+
+# clean the hand geocoded data
+
+```{r}
+# load the data
+  openrice_handgeocoded_raw <-
+    read.csv(glue("{path_dat}openrice_hand_geocoded.csv")) %>%
+    # drop the index column
+    select(-1) %>%
+    # drop the bad coords column
+    select(-bad_coords) %>%
+    group_by(restaurant_name) %>%
+    mutate(
+      # add a store count (to benchmark with corporate data)
+      store_count = n(),
+      # add a chain store indicator: a numeric binary indicator
+      # 1. more than one store; 0. only one store
+      chain_store_indicator = 
+        case_when(
+          n() > 1 ~ 1,
+          n() == 1 ~ 0
+        )
+    ) %>%
+    ungroup() %>%
+    mutate(
+      # remove brackets in the `gmaps_coords` column
+      gmaps_coords = str_replace_all(gmaps_coords, "\\[|\\]", "")
+    ) %>%
+    # separate the `gmaps_coords` column into two: lat and lon
+    separate(gmaps_coords, into = c("lat", "lon"), sep = ",", remove = F)
+```
+
+
+# randomly select a portion to audit coordinates retrieved by Google Maps API
+
+```{r}
+  audit_10p_openrice <-
+    openrice_handgeocoded_raw %>%
+    # drop those i manually corrected
+    filter(is.na(redo)) %>%
+    # sample ten percent of restaurants for auditing
+    sample_n(420)
+```
+

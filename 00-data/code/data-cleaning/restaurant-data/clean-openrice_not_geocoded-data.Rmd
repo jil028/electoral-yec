@@ -1,0 +1,163 @@
+---
+title: "Cleaning OpenRice Data"
+author: "Jiayi Li"
+date: '2022-08-04'
+output: html_document
+---
+Purpose: to clean data scraped from OpenRice
+To-Do:
+ - 08/04/2022:
+  -- Merge the two list and add their political ideologies
+  -- Add a source column
+  -- Add a chain store column
+  -- Add a store status column by parsing the restaurant name (indicated in this variable)
+  -- Add a constituency variable in English (using `district`)
+
+```{r setup, include=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# load packages and  raw data
+```{r}
+  library(glue)
+  path <- "/Users/jiayili/Dropbox/senior-thesis/01-code/"
+# load packages
+  source(glue("{path}helper-packages.R"))
+
+# load raw data
+  path_dat <- "/Users/jiayili/Dropbox/senior-thesis/00-data/00-raw-data/restaurant-data/working-data/openrice/"
+
+# load yellow businesses
+  openrice_yellow <-
+    read.csv(glue("{path_dat}openrice_yellow.csv")) %>%
+    mutate(
+      # add columns for political ideologies
+      # `ideo_text`(character):
+      ideo_text = "Yellow",
+      # `ideo_bi`(numeric binary indicator): 1. Yellow; 0. Blue
+      ideo_bi = 1
+    )
+
+# load blue businesses
+  openrice_blue <-
+    read.csv(glue("{path_dat}openrice_blue.csv")) %>%
+    mutate(
+      # add columns for political ideologies
+      # `ideo_text`(character):
+      ideo_text = "Blue",
+      # `ideo_bi`(numeric binary indicator): 1. Yellow; 0. Blue
+      ideo_bi = 0
+    )
+```
+
+# stack and clean the data
+
+```{r}
+# stack the data
+  stacked_openrice_raw <-
+    openrice_yellow %>%
+    bind_rows(openrice_blue) 
+
+# get a list of unique district names
+   ls_distritc <-
+     stacked_openrice_raw %>%
+     distinct(district)
+
+# clean the data
+  clean_openrice_not_geocoded <-
+    stacked_openrice_raw %>%
+    # drop the index column
+    select(-X) %>%
+    group_by(restaurant_name) %>%
+    mutate(
+      # add a store count (to benchmark with corporate data)
+      store_count = n(),
+      # add a chain store indicator: a numeric binary indicator
+      # 1. more than one store; 0. only one store
+      chain_store_indicator = 
+        case_when(
+          n() > 1 ~ 1,
+          n() == 1 ~ 0
+        )
+    ) %>%
+    ungroup() %>%
+    mutate(
+      # add a source column
+      source = "OpenRice",
+      
+      # add a store status by parsing the restaurant name: a numeric binary indicator
+      # 1. Open; 0. Permanently Closed
+      store_status =
+        case_when(
+          str_detect(restaurant_name, "(已結業)") ~ 0,
+          TRUE ~ 1
+        ),
+      
+      # add a district council election constituency column 
+      # https://www.elections.gov.hk/dc2019/chi/p_cs.html
+      dce_constituency =
+        case_when(
+          # 中西區
+          district %in% c("西環", "中環", "上環", "半山", "金鐘", "山頂") ~ "Central and Western District",
+          # 油尖旺區
+          district %in% c("油麻地", "旺角", "大角咀", "佐敦", "尖沙咀", "太子") ~ "Yau Tsim Mong District",
+          # 元朗區
+          district %in% c("元朗", "天水圍", "流浮山") ~ "Yuen Long District",
+          # 沙田區
+          district %in% c("馬鞍山", "大圍", "火炭", "沙田") ~ "Sha Tin District",
+          # 深水埗區
+          district %in% c("長沙灣", "荔枝角", "深水埗", "美孚", "石硤尾") ~ "Sham Shui Po District",
+          # 葵青區
+          district %in% c("葵芳", "葵涌", "青衣") ~ "Kwai Tsing District",
+          # 灣仔區
+          district %in% c("銅鑼灣", "灣仔", "天后", "大坑", "跑馬地") ~ "Wan Chai District",
+          # 東區
+          district %in% c("北角", "鰂魚涌", "柴灣", "筲箕灣", "西灣河", "杏花邨", "太古") ~ "Eastern District",
+          # 觀塘區
+          district %in% c("觀塘", "九龍灣", "牛頭角", "藍田", "油塘", "鯉魚門") ~ "Kwun Tong District",
+          # 黃大仙區
+          district %in% c("新蒲崗", "慈雲山", "鑽石山", "樂富", "彩虹", "黃大仙") ~ "Wong Tai Sin District",
+          # 九龍城區
+          district %in% c("九龍城", "紅磡", "土瓜灣", "何文田", "九龍塘") ~ "Kowloon City District",
+          # 大埔區
+          district %in% c("大埔", "太和") ~ "Dai Po District",
+          # 西貢區
+          district %in% c("將軍澳", "西貢") ~ "Sai Kung District",  
+          # 荃灣區
+          district %in% c("荃灣", "深井") ~ "Tsuen Wan District",
+          # 屯門區
+          district %in% c("屯門") ~ "Tuen Mun District",
+          # 北區
+          district %in% c("上水", "粉嶺") ~ "North District",
+          # 南區
+          district %in% c("鴨脷洲", "香港仔", "薄扶林", "黃竹坑", "赤柱", "石澳") ~ "Southern District",
+          # 離島區: inlcuding 赤鱲, 大澳
+          district %in% c("東涌", "長洲", "大嶼山", "南丫島", "赤鱲角", "大澳", "坪洲") ~ "Islands District",
+          TRUE ~ NA_character_
+        )
+    )
+```
+
+# reorder the columns
+
+```{r}
+col_order <-
+  c("source",
+    "restaurant_name",
+    "dce_constituency",
+    "district",
+    "address",
+    "store_status",
+    "rating",
+    "price",
+    "chain_store_indicator",
+    "store_count",
+    "ideo_text",
+    "ideo_bi"
+  )
+clean_openrice_not_geocoded <- clean_openrice_not_geocoded[, col_order]
+```
+
+
+
