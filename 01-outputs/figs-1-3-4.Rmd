@@ -151,8 +151,8 @@ timeline_2019 <-
              show_labels = FALSE) +
   theme(axis.text.y = element_text(size = 12),
         axis.text.x = element_text(size = 12)) +
-  geom_text_repel(data=p$layers[[3]]$data,
-                  label=p$layers[[3]]$data$label, 
+  geom_text_repel(data = p$layers[[3]]$data,
+                  label = p$layers[[3]]$data$label, 
                   size = 4, 
                   color="black")
 ```
