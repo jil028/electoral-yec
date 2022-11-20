@@ -20,15 +20,15 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 library(glue)
-  path <- "/Users/jiayili/Dropbox/senior-thesis/01-code/"
+  path <- "enter your path"
 # load packages
-  source(glue("{path}helper-packages.R"))
+  source(glue("{path}/code/helper-packages.R"))
   
 # load raw openrice data (geocoded)
-  path_dat <- "/Users/jiayili/Dropbox/senior-thesis/00-data/00-raw-data/restaurant-data/working-data/openrice/"
+  path_dat <- "enter your path to data"
   
   openrice_raw_geocoded <-
-    read.csv(glue("{path_dat}geocoded_openrice.csv")) %>%
+    read.csv(glue("{path_dat}/geocoded_openrice.csv")) %>%
     # drop the index column
     select(-1)
 ```
