@@ -1,0 +1,114 @@
+---
+title: "Cleaning 2015 District Council Election"
+author: "Jiayi Li"
+date: "2022-09-13"
+output: html_document
+---
+Purpose: to clean the election results of the 2015 HK District Council Election at the polling station level.
+To-Do: 
+- 09/13:
+ -- Merge all excel files (done)
+ -- Add a constituency column (done)
+ -- Geocode the merged file in Python 
+ -- Check for bad coordinates 
+ -- Reorder columns 
+ 
+```{r setup, include=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# load packages and data
+
+```{r}
+# load packages
+  source("helper-packages.R")
+
+# load raw election data
+  path <- "/Users/jiayili/Dropbox/senior-thesis/00-data/00-raw-data/election-data/2015_district_council_election/individual_stations/"
+# get file names
+  data_files <- list.files(path, full.names = TRUE)
+  
+# loop in all file names to load data
+  for(i in 1:length(data_files)) {                              
+    assign(paste0("hk_2015_disco_", i),                                   
+           rio::import(data_files[i]))
+  }
+  
+# load data with candidate names
+  path_1 <- "/Users/jiayili/Dropbox/senior-thesis/00-data/00-raw-data/election-data/2015_district_council_election"
+  candid_hk_2015_disco <-
+    read.csv(glue("{path_1}/hk2015_district_election_candidate_shares.csv")) %>%
+    # drop the index column
+    select(-X)
+```
+
+# reshape the candidate data for matching
+
+## Notes: "*" means uncontested --> dropped
+
+```{r}
+# pivot wider
+reshaped_hk_2015_disco_candid <-
+  candid_hk_2015_disco %>%
+  pivot_wider(
+    id_cols = `Constituency.Code`,
+    names_from = c(`Candidate.Number`),
+    values_from = `Name.of.Candidate`,
+    names_prefix = "name_candid_"
+  ) %>%
+  select("district_code" = `Constituency.Code`, starts_with("name_candid_")) %>%
+  # drop uncontested candidates
+  select(-`name_candid_*`)
+```
+
+# stack counting results at the ps level and clean
+
+```{r}
+# bind rows 
+  hk_2015_dsc_raw <-
+    # merge all loaded data sets
+    do.call("rbind", mget(ls(pattern = "^hk_2015_disco_*")))
+# reset index
+  row.names(hk_2015_dsc_raw) <- NULL
+# lower column names
+  names(hk_2015_dsc_raw) <- tolower(names(hk_2015_dsc_raw))
+  
+# clean
+  clean_not_geocoded_2015_dsc <-
+    hk_2015_dsc_raw %>%
+    mutate(
+      # add a constituency columns
+      constituency = 
+        case_when(
+          str_detect(district_code, "A") ~ "Central & Western",
+          str_detect(district_code, "B") ~ "Wan Chai",
+          str_detect(district_code, "C") ~ "Eastern District",
+          str_detect(district_code, "D") ~ "Southern District",
+          str_detect(district_code, "E") ~ "Yau Tsim Mong District",
+          str_detect(district_code, "F") ~ "Sham Shui Po",
+          str_detect(district_code, "G") ~ "Kowloon City District",
+          str_detect(district_code, "H") ~ "Wong Tai Sin District",
+          str_detect(district_code, "J") ~ "Kwun Tong District",
+          str_detect(district_code, "K") ~ "Tsuen Wan District",
+          str_detect(district_code, "L") ~ "Tuen Mun District",
+          str_detect(district_code, "M") ~ "Yuen Long District",
+          str_detect(district_code, "N") ~ "North District",
+          str_detect(district_code, "P") ~ "Tai Po District",
+          str_detect(district_code, "Q") ~ "Sai Kung District",
+          str_detect(district_code, "R") ~ "Sha Tin District",
+          str_detect(district_code, "S") ~ "Kwai Tsing District",
+          str_detect(district_code, "T") ~ "Islands District",
+        ) 
+    ) %>%
+    # add candidate name columns
+    left_join(reshaped_hk_2015_disco_candid, by = "district_code")
+```
+
+# save a version for geocoding in python
+
+```{r}
+write.csv(clean_not_geocoded_2015_dsc, "/Users/jiayili/Dropbox/senior-thesis/01-code/working-data/clean_not_geocoded_2015_dsc.csv")
+```
+
+

@@ -1,0 +1,197 @@
+---
+title: "Cleaning 2021 HK Legislative Council Election Data"
+author: "Jiayi Li"
+date: "2022-08-22"
+output: html_document
+---
+Purpose: to clean the election results of 2021 HK LegCo Election.
+** Not hand-geocoded yet **
+To-Do:
+- 08/22/2022:
+  -- Add a constituency variable (done)
+  -- Add candidate name columns 
+  -- Break coordinates of polling stations into two columns and check for bad coordinates
+  
+```{r setup, include=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# load packages and data
+
+```{r, message=FALSE}
+# load packages
+  source("helper-packages.R")
+```
+
+
+```{r}
+# load raw data
+  path_dat <- "/Users/jiayili/Dropbox/senior-thesis/00-data/00-raw-data/election-data/2021_legislative_council_election"
+  hk_legco_2021_raw <-
+    rio::import(glue("{path_dat}/hk_lce_2021_ps.csv"))
+```
+
+# clean
+
+```{r}
+# clean
+  clean_not_handgeocoded_2021_legco <-
+    hk_legco_2021_raw %>%
+      mutate(
+      election = "2021 Legislative Council Election",
+      
+      ################
+      # Constituency #
+      ################
+      
+      # add a constituency variable: 
+      ## a character variable
+      lc_constituency =
+        case_when(
+          lc_constituency_code == 1 ~ "HONG KONG ISLAND EAST",
+          lc_constituency_code == 2 ~ "HONG KONG ISLAND WEST", 
+          lc_constituency_code == 3 ~ "KOWLOON EAST", 
+          lc_constituency_code == 4 ~ "KOWLOON WEST", 
+          lc_constituency_code == 5 ~ "KOWLOON CENTRAL", 
+          lc_constituency_code == 6 ~ "NEW TERRITORIES SOUTH EAST", 
+          lc_constituency_code == 7 ~ "NEW TERRITORIES NORTH", 
+          lc_constituency_code == 8 ~ "NEW TERRITORIES NORTH WEST", 
+          lc_constituency_code == 9 ~ "NEW TERRITORIES SOUTH WEST", 
+          lc_constituency_code == 10 ~ "NEW TERRITORIES NORTH EAST" 
+        ),
+      
+      lc_constituency = str_to_title(lc_constituency),
+      
+    
+      #######################
+      # Names of Candidates #
+      #######################
+    
+      # add candidate name columns
+      # character variables
+      name_cand_1 = 
+        case_when(
+          lc_constituency_code == 1 ~ "LEUNG HEI EDWARD",
+          lc_constituency_code == 2 ~ "IP LAU SUK YEE REGINA", 
+          lc_constituency_code == 3 ~ "TANG KA PIU", 
+          lc_constituency_code == 4 ~ "LEUNG MAN KWONG", 
+          lc_constituency_code == 5 ~ "LEE WAI KING STARRY", 
+          lc_constituency_code == 6 ~ "CHOI MING HEI", 
+          lc_constituency_code == 7 ~ "ZHANG XINYU", 
+          lc_constituency_code == 8 ~ "CHOW HO DING HOLDEN", 
+          lc_constituency_code == 9 ~ "LAU CHEUK YU", 
+          lc_constituency_code == 10 ~ "LEE TSZ KING DOMINIC" 
+        ),
+      
+      name_cand_2 = 
+        case_when(
+          lc_constituency_code == 1 ~ "LIU TIN SHING",
+          lc_constituency_code == 2 ~ "CHAN HOK FUNG", 
+          lc_constituency_code == 3 ~ "NGAN MAN YU", 
+          lc_constituency_code == 4 ~ "FUNG KIN KEE FREDERICK", 
+          lc_constituency_code == 5 ~ "YANG WING KIT", 
+          lc_constituency_code == 6 ~ "LI SAI WING", 
+          lc_constituency_code == 7 ~ "LAU KWOK FAN", 
+          lc_constituency_code == 8 ~ "TIEN MICHAEL PUK SUN", 
+          lc_constituency_code == 9 ~ "CHAN HAN PAN", 
+          lc_constituency_code == 10 ~ "WONG SING CHI" 
+        ),
+      
+      name_cand_3 = 
+        case_when(
+          lc_constituency_code == 1 ~ "NG CHAU PEI",
+          lc_constituency_code == 2 ~ "FONG LUNG FEI", 
+          lc_constituency_code == 3 ~ "CHAN CHUN HUNG", 
+          lc_constituency_code == 4 ~ "CHENG WING SHUN VINCENT", 
+          lc_constituency_code == 5 ~ "TAM HEUNG MAN", 
+          lc_constituency_code == 6 ~ "LAM SO WAI", 
+          lc_constituency_code == 7 ~ "SHUM HO KIT", 
+          lc_constituency_code == 8 ~ "WONG CHUN LONG", 
+          lc_constituency_code == 9 ~ "CHAN WING YAN", 
+          lc_constituency_code == 10 ~ "CHAN HAK KAN" 
+        ),
+      
+      name_cand_4 = 
+        case_when(
+          lc_constituency_code == 1 ~ "POON CHUK HUNG",
+          lc_constituency_code == 3 ~ "WU KIN WA", 
+          lc_constituency_code == 7 ~ "TZENG LI WEN JUDY", 
+          lc_constituency_code == 10 ~ "WONG WING HO ALLAN",
+          TRUE ~ NA_character_
+        ),
+      
+      name_cand_5 = 
+        case_when(
+          lc_constituency_code == 3 ~ "LI KA YAN",
+          TRUE ~ NA_character_
+        ),
+      
+      # standardize lc code
+      lc_constituency_code = paste0("LC", lc_constituency_code)
+      ) %>%
+  
+    ##########################
+    # Geographic Coordinates #
+    ##########################
+
+    mutate(
+    # remove brackets in the `ps_gmaps_coords` column
+      ps_gmaps_coords = str_replace_all(ps_gmaps_coords, "\\[|\\]", "")
+    ) %>%
+    # separate the `gmaps_coords` column into two: lat and lon
+    separate(ps_gmaps_coords, into = c("lat", "lon"), sep = ",", remove = FALSE) %>%
+    # check for bad coordinates
+    # Hong Kong SAR lies between Latitude 22°08' North and 22°35' North, 
+    # Longitude 113°49' East and 114°31' East
+    mutate(
+      bad_coords =
+        case_when(
+          as.numeric(lat) < 22|as.numeric(lat) > 23|as.numeric(lon) < 113|as.numeric(lon) > 115 ~ "bad",
+          TRUE ~ "good"
+        )
+    ) %>%
+    # drop the `bad_name` column
+    select(-bad_names)
+
+```
+
+# reorder the columns
+
+```{r}
+# set the order
+  col_order <-
+    c("election",
+      "lc_constituency",
+      "lc_constituency_code",
+      "id_poll_station",
+      "poll_station",
+      "ps_gmaps_coords",
+      "lat",
+      "lon",
+      "bad_coords",
+      "name_cand_1",
+      "votes_cand_1",
+      "name_cand_2",
+      "votes_cand_2",
+      "name_cand_3",
+      "votes_cand_3",
+      "name_cand_4",
+      "votes_cand_4",
+      "name_cand_5",
+      "votes_cand_5"
+    )
+
+# reorder the columns
+  clean_not_handgeocoded_2021_legco <- clean_not_handgeocoded_2021_legco[, col_order]
+```
+
+# save a version for manual geocoding
+
+```{r}
+path_work_dat <- "/Users/jiayili/Dropbox/senior-thesis/00-data/00-raw-data/election-data/2021_legislative_council_election"
+
+write.csv(clean_not_handgeocoded_2021_legco,
+          glue("{path_work_dat}/clean_not_handgeocoded_2021_legco.csv"))
+```
+

@@ -1,0 +1,196 @@
+---
+title: "Cleaning 2019 District Coucil Election"
+author: "Jiayi Li"
+date: "2022-08-23"
+output: html_document
+---
+Purpose: to clean the election results of the 2019 HK District Council Election at the polling station level.
+To-Do: 
+- 08/23:
+ -- Merge all excel files (done)
+ -- Add a constituency column (done)
+ -- Geocode the merged file in Python (done)
+ -- Check for bad coordinates (done)
+ -- Reorder columns (done)
+ 
+```{r setup, include=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# load packages and raw data
+
+```{r}
+# load packages
+  source("helper-packages.R")
+
+# load raw election data
+  path <- "/Users/jiayili/Dropbox/senior-thesis/00-data/00-raw-data/election-data/2019_district_council_election/individual_stations/"
+# get file names
+  data_files <- list.files(path, full.names = TRUE)
+  
+# loop in all file names to load data
+  for(i in 1:length(data_files)) {                              
+    assign(paste0("hk_2019_disco_", i),                                   
+           rio::import(data_files[i]))
+  }
+  
+# load data with candidate names
+  path_1 <- "/Users/jiayili/Dropbox/senior-thesis/00-data/00-raw-data/election-data/2019_district_council_election"
+  candid_hk_2019_disco <-
+    rio::import(glue("{path_1}/hk2019_district_election_candidate_shares.csv")) %>%
+    # drop the index column
+    select(-V1)
+
+```
+
+# reshape the candidate data for matching
+
+```{r}
+# pivot wider
+reshaped_hk_2019_disco_candid <-
+  candid_hk_2019_disco %>%
+  pivot_wider(
+    id_cols = `Constituency Code`,
+    names_from = c(`Candidate Number`),
+    values_from = `Name of Candidate`,
+    names_prefix = "name_candid_"
+  ) %>%
+  select("district_code" = `Constituency Code`, starts_with("name_candid_"))
+```
+
+# stack counting results at the ps level and clean
+
+```{r}
+# bind rows 
+  hk_2019_dsc_raw <-
+    # merge all loaded data sets
+    do.call("rbind", mget(ls(pattern = "^hk_2019_disco_*")))
+
+# reset index
+  row.names(hk_2019_dsc_raw) <- NULL
+
+# lower column names
+  names(hk_2019_dsc_raw) <- tolower(names(hk_2019_dsc_raw))
+  
+# clean
+  clean_not_geocoded_2019_dsc <-
+    hk_2019_dsc_raw %>%
+    mutate(
+      # add a constituency columns
+      constituency = 
+        case_when(
+          str_detect(district_code, "A") ~ "Central & Western",
+          str_detect(district_code, "B") ~ "Wan Chai",
+          str_detect(district_code, "C") ~ "Eastern District",
+          str_detect(district_code, "D") ~ "Southern District",
+          str_detect(district_code, "E") ~ "Yau Tsim Mong District",
+          str_detect(district_code, "F") ~ "Sham Shui Po",
+          str_detect(district_code, "G") ~ "Kowloon City District",
+          str_detect(district_code, "H") ~ "Wong Tai Sin District",
+          str_detect(district_code, "J") ~ "Kwun Tong District",
+          str_detect(district_code, "K") ~ "Tsuen Wan District",
+          str_detect(district_code, "L") ~ "Tuen Mun District",
+          str_detect(district_code, "M") ~ "Yuen Long District",
+          str_detect(district_code, "N") ~ "North District",
+          str_detect(district_code, "P") ~ "Tai Po District",
+          str_detect(district_code, "Q") ~ "Sai Kung District",
+          str_detect(district_code, "R") ~ "Sha Tin District",
+          str_detect(district_code, "S") ~ "Kwai Tsing District",
+          str_detect(district_code, "T") ~ "Islands District",
+        ) 
+    ) %>%
+    # add candidate name columns
+    left_join(reshaped_hk_2019_disco_candid, by = "district_code")
+```
+
+# save a version for geocoding in python
+
+```{r}
+write.csv(clean_not_geocoded_2019_dsc, "/Users/jiayili/Dropbox/senior-thesis/01-code/working-data/clean_not_geocoded_2019_dsc.csv")
+```
+
+# load the geocoded data to check bad coordinates
+
+```{r}
+# load data
+path_2 <- "/Users/jiayili/Dropbox/senior-thesis/01-code/working-data"
+geocoded_2019_dsc <- 
+  read.csv(glue("{path_2}/geocoded_hk_2019_disco.csv"))
+
+# check for bad coordinates
+not_handgeocoded_2019_dsc <-
+  geocoded_2019_dsc %>%
+  ##########################
+  # Geographic Coordinates #
+  ##########################
+    mutate(
+    # remove brackets in the `ps_gmaps_coords` column
+      ps_gmaps_coords = str_replace_all(ps_gmaps_coords, "\\[|\\]", "")
+    ) %>%
+    # separate the `gmaps_coords` column into two: lat and lon
+    separate(ps_gmaps_coords, into = c("lat", "lon"), sep = ",", remove = FALSE) %>%
+    # check for bad coordinates
+    # Hong Kong SAR lies between Latitude 22°08' North and 22°35' North, 
+    # Longitude 113°49' East and 114°31' East
+    mutate(
+      bad_coords =
+        case_when(
+          as.numeric(lat) < 22|as.numeric(lat) > 23|as.numeric(lon) < 113|as.numeric(lon) > 115 ~ "bad",
+          TRUE ~ "good"
+        )
+    )
+```
+
+# reorder the columns
+
+```{r}
+# set the order
+  col_order <-
+    c("constituency",
+      "district_name",
+      "district_code",
+      "chinese_name",
+      "station_code",
+      "name_poll_station",
+      "chinese_name_poll_station",
+      "ps_gmaps_coords",
+      "lat",
+      "lon",
+      "bad_coords",
+      "name_candid_1",
+      "votes_candidate_1",
+      "name_candid_2",
+      "votes_candidate_2",
+      "name_candid_3",
+      "votes_candidate_3",
+      "name_candid_4",
+      "votes_candidate_4",
+      "name_candid_5",
+      "votes_candidate_5",
+      "votes_candidate_6"
+    )
+# reorder the columns
+  not_handgeocoded_2019_dsc <- 
+    not_handgeocoded_2019_dsc[, col_order] %>%
+    # drop `votes_candidate_6`: no candidate
+    select(-votes_candidate_6)
+```
+
+# save a version for hand geocoding
+```{r}
+write.csv(not_handgeocoded_2019_dsc, "clean_not_handgeocoded_2019_disco.csv")
+```
+
+# randomly sample a portion for auditing: 10 percent
+
+```{r}
+set.seed(123)
+audit_10p_2019_disco <-
+    not_handgeocoded_2019_dsc %>%
+    # drop those i manually corrected
+    filter(bad_coords != "bad") %>%
+    # sample ten percent of polling stations for auditing
+    sample_n(61)
+```
+
