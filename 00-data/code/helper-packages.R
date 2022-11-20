@@ -17,13 +17,13 @@ library(lfe)
 library(ggpubr)
 library(cowplot)
 library(forestplot)
-library(ggmap)
-library(googleway)
 
 # geographical analysis
 library(sf)
 library(sp)
 library(leaflet)
+library(ggmap)
+library(googleway)
 
 # python
 library(reticulate)
