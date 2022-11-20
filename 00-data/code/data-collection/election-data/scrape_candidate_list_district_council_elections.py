@@ -10,7 +10,7 @@ from time import sleep
 # initialize chrome driver
 driver = webdriver.Chrome(executable_path = 'enter path to your chromedriver')
 
-# function to transform tables to 2D
+# functions to transform tables to 2D
 def table_to_2d(table_tag):
     rows = table_tag("tr")
     cols = rows[0](["td", "th"])
