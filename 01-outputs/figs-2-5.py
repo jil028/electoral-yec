@@ -13,6 +13,38 @@ hk_shapefile = gpd.read_file('../hk_2019_dsc.shp')
 ## Figure 2 ##
 ##############
 
+# load data for protest sites
+# HKU website: 
+# https://datahub.hku.hk/articles/dataset/ANTIELAB_Research_Data_Archive_-_Mobilization_Map_Data/13711540
+
+# set the geometry
+crs = {'init':'epsg:4326'}
+# read in the shape file for the protest/mobilization data
+geodata = gpd.read_file('/Users/jiayili/Dropbox/Mac/Downloads/all/event.shp')
+geodata = geodata['geometry']
+# plot points
+geodata.plot()
+
+# create subplots
+fig, ax = plt.subplots(figsize=(7,7))
+
+# plot points onto the official district council constituency shapefile
+hk_shapefile.plot(ax=ax, facecolor='Grey', edgecolor='k',alpha=0.2,linewidth=1,cmap="cividis")
+
+geodata.plot(ax=ax, color='red', edgecolor = 'black', alpha = 0.2);
+
+# set axis labels
+ax.set_xlabel('Longitude', fontsize=10, fontname='Arial')
+ax.set_ylabel('Latitude', fontsize=10, fontname='Arial')
+# despine
+sns.despine()
+# save
+fig.savefig('protest_sites.jpg', dpi=400)
+
+##############
+## Figure 5 ##
+##############
+
 # load raw restaurant data
 restaurant_raw = pd.read_csv("../openrice_final_raw.csv")
 
@@ -71,36 +103,3 @@ ax.set_ylabel('Latitude', fontsize=10, fontname='Arial')
 sns.despine()
 # save
 fig.savefig('yellow_fig.jpg', dpi=400)
-
-
-##############
-## Figure 2 ##
-##############
-
-# load data for protest sites
-# HKU website: 
-# https://datahub.hku.hk/articles/dataset/ANTIELAB_Research_Data_Archive_-_Mobilization_Map_Data/13711540
-
-# set the geometry
-crs = {'init':'epsg:4326'}
-# read in the shape file for the protest/mobilization data
-geodata = gpd.read_file('/Users/jiayili/Dropbox/Mac/Downloads/all/event.shp')
-geodata = geodata['geometry']
-# plot points
-geodata.plot()
-
-# create subplots
-fig, ax = plt.subplots(figsize=(7,7))
-
-# plot points onto the official district council constituency shapefile
-hk_shapefile.plot(ax=ax, facecolor='Grey', edgecolor='k',alpha=0.2,linewidth=1,cmap="cividis")
-
-geodata.plot(ax=ax, color='red', edgecolor = 'black', alpha = 0.2);
-
-# set axis labels
-ax.set_xlabel('Longitude', fontsize=10, fontname='Arial')
-ax.set_ylabel('Latitude', fontsize=10, fontname='Arial')
-# despine
-sns.despine()
-# save
-fig.savefig('protest_sites.jpg', dpi=400)
