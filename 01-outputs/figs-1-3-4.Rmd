@@ -28,7 +28,7 @@ source_dir <- "enter data source directory"
 
 # load raw data 
 raw_eiu_dem_index <-
-  read_excel("../EIU.xlsx", sheet = 2)
+  read_excel(glue("{source_dir}/EIU.xlsx", sheet = 2))
 
 # clean data 
 hk_dem_index_raw <-
@@ -84,7 +84,7 @@ plt_dem_index <-
 
 # load raw data
 openrice_raw <- 
-    read.csv("../openrice_final_raw.csv") 
+    read.csv(glue("{source_dir}/openrice_final_raw.csv"))
 
 # group data and get summary stats
 out <-
