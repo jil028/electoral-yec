@@ -94,7 +94,7 @@ for page in range(1, 6):
     df_hk_lce_2016 = df_hk_lce_2016.append(temp_df_table_transformed, ignore_index = True)
 
 # save as a csv file
-ls_hk_lce_2016.to_csv('2016_legco_candidate_list.csv', index = False)
+df_hk_lce_2016.to_csv('2016_legco_candidate_list.csv', index = False)
 
 
 
