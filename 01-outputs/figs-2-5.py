@@ -20,7 +20,7 @@ hk_shapefile = gpd.read_file('../hk_2019_dsc.shp')
 # set the geometry
 crs = {'init':'epsg:4326'}
 # read in the shape file for the protest/mobilization data
-geodata = gpd.read_file('/Users/jiayili/Dropbox/Mac/Downloads/all/event.shp')
+geodata = gpd.read_file('../all/event.shp')
 geodata = geodata['geometry']
 # plot points
 geodata.plot()
