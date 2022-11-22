@@ -1,5 +1,5 @@
 ---
-title: "Visualization in the Background and Methods Chapter"
+title: "Visualization in the Background and Methods Chapters"
 author: "Jiayi Li"
 date: "2022-11-18"
 output: html_document
@@ -137,7 +137,7 @@ df_timeline_2019 <-
   tribble(
     ~start_date, ~event, ~type, ~end_date,
     "2019-03-15", "Beginning of the Anti-ELAB Movement", "Sit-in protests", NA_character_,
-    "2019-06-09", "Escalation of protests", "Massive gatherings", "2019-12-31",
+    "2019-06-09", "Escalation of protests", "Massive gatherings", "2019-12-31", # set to end on 12/31 given that COVID-19 started
     "2019-07-01", "The firing of the Yoshinoya staff", "Development of the YEC", NA_character_,
     "2019-10-10", '"Day of Thanks"', "Development of the YEC", NA_character_,
     "2019-10-26", '"Shopping Spree Day"', "Development of the YEC", NA_character_,
