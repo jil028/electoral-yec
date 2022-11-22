@@ -69,8 +69,7 @@ plt_dem_index <-
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust = 1, size = 12),
         axis.text.y = element_text(size = 12),
-        axis.title.y = element_text(size = 12)
-  ) +
+        axis.title.y = element_text(size = 12)) +
   xlab(" ") +
   ylab("Voice and Accountability Index")
 ```
@@ -120,7 +119,6 @@ bar_by_ideo <-
           panel.grid.major = element_blank()
         ) +
     guides(fill = guide_legend(override.aes = list(size = 4.5))) +
-    #scale_shape(guide = guide_legend(title.position = "top")) +
     ylab("Number of restaurants") +
     xlab(" ")
 ```
