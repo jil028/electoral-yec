@@ -125,7 +125,7 @@ bar_by_ideo <-
     xlab(" ")
 ```
 
-# figure 4: time of the development of the YEC
+# figure 4: timeline of the development of the YEC
 
 ```{r}
 ##############
