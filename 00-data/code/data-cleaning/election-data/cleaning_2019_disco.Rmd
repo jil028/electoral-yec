@@ -52,7 +52,7 @@ reshaped_hk_2019_disco_candid <-
   candid_hk_2019_disco %>%
   pivot_wider(
     id_cols = `Constituency Code`,
-    names_from = c(`Candidate Number`),
+    names_from = `Candidate Number`,
     values_from = `Name of Candidate`,
     names_prefix = "name_candid_"
   ) %>%
