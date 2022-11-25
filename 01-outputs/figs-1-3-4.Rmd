@@ -1,5 +1,5 @@
 ---
-title: "Visualization in the Background and Methods Chapters"
+title: "Visualization: Partial Thesis"
 author: "Jiayi Li"
 date: "2022-11-18"
 output: html_document
