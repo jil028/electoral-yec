@@ -16,9 +16,6 @@ hk_shapefile = gpd.read_file('../hk_2019_dsc.shp')
 # load data for protest sites
 # HKU website: 
 # https://datahub.hku.hk/articles/dataset/ANTIELAB_Research_Data_Archive_-_Mobilization_Map_Data/13711540
-
-# set the geometry
-crs = {'init':'epsg:4326'}
 # read in the shape file for the protest/mobilization data
 geodata = gpd.read_file('../all/event.shp')
 geodata = geodata['geometry']
@@ -81,7 +78,6 @@ fig.savefig('blue_fig.jpg', dpi=400)
 
 # Yellow restaurants
 # set the geometry
-crs = {'init':'epsg:4326'}
 geometry = [Point(xy) for xy in zip(yellow_restaurant_raw["lon"], yellow_restaurant_raw["lat"])]
 geodata = gpd.GeoDataFrame(yellow_restaurant_raw, crs = crs, geometry = geometry)
 # plot the points
