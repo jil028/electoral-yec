@@ -35,6 +35,7 @@ hk_dem_index_raw <-
   raw_eiu_dem_index %>%
   # subset to only include data for hong kong
   filter(country == "Hong Kong SAR, China") %>%
+  # convert numeric variables to characters
   mutate_all(as.character) %>%
   # reshape data
   pivot_longer(
@@ -58,6 +59,7 @@ plt_dem_index <-
   ggplot(aes(x = as.numeric(year_4dig), y = as.numeric(value), group = 1)) +
   geom_line() +
   geom_point() +
+  # annotate important events
   geom_vline(xintercept = 1997, linetype = 2, color = "coral3") +
   annotate("text", x = 2002.5, y = 0.7, 
            label = "1997: Handover of Hong Kong",
@@ -66,6 +68,7 @@ plt_dem_index <-
   annotate("text", x = 2010, y = 0.55, 
            label = "2014: Umbrella Movement",
            colour = "coral3") +
+  # adjust themes
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust = 1, size = 12),
         axis.text.y = element_text(size = 12),
@@ -108,9 +111,11 @@ bar_by_ideo <-
                        breaks = breaks, labels = ticklabels, 
                        sec.axis = sec_axis(~ . * 1, breaks = breaks, labels = ticklabels)) + 
     coord_flip() +
+    # recode the legend
     scale_fill_manual(name = "Political support",
                       labels = c("Blue (pro-Beijing)", "Yellow (pro-democracy)"),
                       values=c("cornflowerblue", "gold")) +
+    # adjust themes
     theme_minimal() +
     theme(text = element_text(size = 12)) +
     theme(legend.direction = "horizontal", 
@@ -149,6 +154,7 @@ timeline_2019 <-
              show_labels = FALSE) +
   theme(axis.text.y = element_text(size = 12),
         axis.text.x = element_text(size = 12)) +
+  # repel text labels
   geom_text_repel(data = p$layers[[3]]$data,
                   label = p$layers[[3]]$data$label, 
                   size = 4, 
