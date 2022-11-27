@@ -33,7 +33,7 @@ openrice_raw['gmaps_coords'] = gmaps_coords
 
 # function to check bad addresses
 def bad_names(row):
-    if row['gmaps_coords'] == [0, 0]:
+    if row['gmaps_coords'] == [0,0]:
         return 1
     else:
         return 0
