@@ -45,8 +45,9 @@ hk_dem_index_raw <-
   # subset to only include indexes for `voice and accountability`
   filter(str_detect(name, "VA")) %>%
   mutate(
-    # create a four-digits year variable
+    # parse the 2-digit year variable
     year_2dig = substr(name, 4, 5),
+    # create a four-digits year variable
     year_4dig = 
       case_when(
         str_detect(year_2dig, "^9") ~ paste0("19", year_2dig),
@@ -121,8 +122,7 @@ bar_by_ideo <-
     theme(legend.direction = "horizontal", 
           legend.position = "bottom",
           legend.box = "horizontal",
-          panel.grid.major = element_blank()
-        ) +
+          panel.grid.major = element_blank()) +
     guides(fill = guide_legend(override.aes = list(size = 4.5))) +
     ylab("Number of restaurants") +
     xlab(" ")
@@ -158,6 +158,6 @@ timeline_2019 <-
   geom_text_repel(data = p$layers[[3]]$data,
                   label = p$layers[[3]]$data$label, 
                   size = 4, 
-                  color="black")
+                  color = "black")
 ```
 
