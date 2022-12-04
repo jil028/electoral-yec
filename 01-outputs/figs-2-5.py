@@ -23,20 +23,20 @@ geodata = geodata['geometry']
 geodata.plot()
 
 # create subplots
-fig, ax = plt.subplots(figsize=(7,7))
+fig, ax = plt.subplots(figsize = (7,7))
 
 # plot points onto the official district council constituency shapefile
-hk_shapefile.plot(ax=ax, facecolor='Grey', edgecolor='k',alpha=0.2,linewidth=1,cmap="cividis")
+hk_shapefile.plot(ax = ax, facecolor = 'Grey', edgecolor = 'k', alpha = 0.2, linewidth = 1, cmap = "cividis")
 
-geodata.plot(ax=ax, color='red', edgecolor = 'black', alpha = 0.2);
+geodata.plot(ax = ax, color = 'red', edgecolor = 'black', alpha = 0.2);
 
 # set axis labels
-ax.set_xlabel('Longitude', fontsize=10, fontname='Arial')
-ax.set_ylabel('Latitude', fontsize=10, fontname='Arial')
+ax.set_xlabel('Longitude', fontsize = 10, fontname = 'Arial')
+ax.set_ylabel('Latitude', fontsize = 10, fontname = 'Arial')
 # despine
 sns.despine()
 # save
-fig.savefig('protest_sites.jpg', dpi=400)
+fig.savefig('protest_sites.jpg', dpi = 400)
 
 ##############
 ## Figure 5 ##
@@ -59,22 +59,22 @@ geodata = gpd.GeoDataFrame(blue_restaurant_raw, crs = crs, geometry = geometry)
 geodata.plot()
 
 # create subplots
-fig, ax = plt.subplots(figsize=(7,7))
+fig, ax = plt.subplots(figsize = (7,7))
 
 # plot points onto the official district council constituency shapefile
-hk_shapefile.plot(ax=ax, facecolor='Grey', edgecolor='k',alpha=0.2,linewidth=1,cmap="cividis")
+hk_shapefile.plot(ax = ax, facecolor = 'Grey', edgecolor = 'k', alpha = 0.2, linewidth = 1, cmap = "cividis")
 
 
-geodata.plot(ax=ax, color='cornflowerblue', markersize=5);
+geodata.plot(ax = ax, color = 'cornflowerblue', markersize = 5);
 
 
 # set axis labels
-ax.set_xlabel('Longitude', fontsize=10, fontname='Arial')
-ax.set_ylabel('Latitude', fontsize=10, fontname='Arial')
+ax.set_xlabel('Longitude', fontsize = 10, fontname = 'Arial')
+ax.set_ylabel('Latitude', fontsize = 10, fontname = 'Arial')
 # despine
 sns.despine()
 # save
-fig.savefig('blue_fig.jpg', dpi=400)
+fig.savefig('blue_fig.jpg', dpi = 400)
 
 # Yellow restaurants
 # set the geometry
@@ -87,15 +87,15 @@ geodata.plot()
 fig, ax = plt.subplots(figsize=(7,7))
 
 # plot points onto the official district council constituency shapefile
-hk_shapefile.plot(ax=ax, facecolor='Grey', edgecolor='k',alpha=0.2,linewidth=1,cmap="cividis")
+hk_shapefile.plot(ax = ax, facecolor = 'Grey', edgecolor = 'k', alpha = 0.2, linewidth = 1, cmap = "cividis")
 
 
-geodata.plot(ax=ax, color='cornflowerblue', markersize=5);
+geodata.plot(ax = ax, color = 'gold', markersize = 5);
 
 # set axis labels
-ax.set_xlabel('Longitude', fontsize=10, fontname='Arial')
-ax.set_ylabel('Latitude', fontsize=10, fontname='Arial')
+ax.set_xlabel('Longitude', fontsize = 10, fontname = 'Arial')
+ax.set_ylabel('Latitude', fontsize = 10, fontname = 'Arial')
 # despine
 sns.despine()
 # save
-fig.savefig('yellow_fig.jpg', dpi=400)
+fig.savefig('yellow_fig.jpg', dpi = 400)
