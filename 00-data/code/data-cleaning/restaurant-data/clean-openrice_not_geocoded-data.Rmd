@@ -7,7 +7,7 @@ output: html_document
 Purpose: to clean data scraped from OpenRice
 To-Do:
  - 08/04/2022:
-  -- Merge the two list and add their political ideologies
+  -- Merge the two lists and add their political ideologies
   -- Add a source column
   -- Add a chain store column
   -- Add a store status column by parsing the restaurant name (indicated in this variable)
