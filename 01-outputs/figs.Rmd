@@ -19,11 +19,11 @@ library(glue)
 source_dir <- "enter data source directory"
 ```
 
-# figure 1: democracy index
+# figure: democracy index
 # source of data: The Economic Intelligence Unit (https://info.worldbank.org/governance/wgi/Home/downLoadFile?fileName=EIU.xlsx)
 ```{r}
 ##############
-## Figure 1 ##
+## Figure x ##
 ##############
 
 # load raw data 
@@ -78,11 +78,11 @@ plt_dem_index <-
   ylab("Voice and Accountability Index")
 ```
 
-# figure 3: grouped bar chart of politicized restaurants by political ideology
+# figure: grouped bar chart of politicized restaurants by political ideology
 
 ```{r}
 ##############
-## Figure 3 ##
+## Figure x ##
 ##############
 
 # load raw data
@@ -128,11 +128,11 @@ bar_by_ideo <-
     xlab(" ")
 ```
 
-# figure 4: timeline of the development of the YEC
+# figure: timeline of the development of the YEC
 
 ```{r}
 ##############
-## Figure 4 ##
+## Figure x ##
 ##############
 
 # create a tibble for event data
