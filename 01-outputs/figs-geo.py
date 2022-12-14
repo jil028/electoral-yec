@@ -10,7 +10,7 @@ from shapely.geometry import Point, Polygon
 hk_shapefile = gpd.read_file('../hk_2019_dsc.shp')
 
 ##############
-## Figure 2 ##
+## Figure x ##
 ##############
 
 # load data for protest sites
