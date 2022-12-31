@@ -34,8 +34,9 @@ source("helper-packages.R")
   
 # load data for english candidate names and constituency names
 # source: HKSAR gov website
+  source_dir <- "~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2011_district_council_election"
   raw_eng_candid <-
-    rio::import("~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2011_district_council_election/2011_DCE_Valid_Nominations_E.xls") %>%
+    rio::import(glue("{source_dir}/2011_DCE_Valid_Nominations_E.xls")) %>%
     rename("District_Code" = "DCCA Code",
            "Candidate_Number" = "Candidate No.",
            "Candidate_Name_Eng" = "Name") %>%
