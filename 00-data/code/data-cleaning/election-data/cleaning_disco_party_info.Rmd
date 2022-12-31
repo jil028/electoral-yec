@@ -1,0 +1,204 @@
+---
+title: "Cleaning Party Candidate Info for Disco Election"
+author: "Jiayi Li"
+date: "2022-12-24"
+output: html_document
+---
+
+Purpose: to clean the party candidate info for the district council elections between 2011 and 2019.
+
+```{r}
+# load packages
+source("helper-packages.R")
+```
+
+# 2011 Disco
+# Notes: Party affiliations are not available from the gov's website anymore --> scraped from wikipedia archives. Note that the info for 2011 is only available in Chinese and requires translations. (Source: https://tinyurl.com/2hanp5y5)
+
+```{r}
+##########
+## 2011 ##
+##########
+
+# load raw data
+  path <- "~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2011_district_council_election/party-candidate-info"
+
+# get file names
+  data_files <- list.files(path, full.names = TRUE)
+  
+# loop in all file names to load data
+  for(i in 1:length(data_files)) {                              
+    assign(paste0("party_2011_disco_", i),                                   
+           read.csv(data_files[i]))
+  }
+  
+# load data for english candidate names and constituency names
+# source: HKSAR gov website
+  raw_eng_candid <-
+    rio::import("~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2011_district_council_election/2011_DCE_Valid_Nominations_E.xls") %>%
+    rename("District_Code" = "DCCA Code",
+           "Candidate_Number" = "Candidate No.",
+           "Candidate_Name_Eng" = "Name") %>%
+    # drop alias
+    select(-Alias)
+```
+
+# stack all data files
+
+```{r}
+stacked_raw <-
+    # merge all loaded data sets
+    do.call("rbind", mget(ls(pattern = "^party_2011_disco_*")))
+
+# reset index
+row.names(stacked_raw) <- NULL
+```
+
+# get unique affiliation names and save it for hand-coding (pro-democracy/pro-establishment)
+
+```{r}
+ls_uni_affiliations <-
+  stacked_raw %>%
+  distinct(`政治聯繫`)
+
+write_csv(ls_uni_affiliations, "~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2011_district_council_election/poli_affiliations_2011.csv")
+```
+
+# cleaning and translation
+
+```{r}
+stacked_clean <- 
+  stacked_raw %>%
+  # translate column names to english
+  rename("District_Code" = "選區號碼",
+         "Chinese_Name" = "選區",
+         "Candidate_Name_Chinese" = "候選人姓名",
+         "Alias" = "別名",
+         "Political_Affiliations" = "政治聯繫") %>%
+  mutate(
+    # parse candidate numbers for each constituency district
+    Candidate_Number =
+      case_when(
+        str_detect(Candidate_Name_Chinese, "^1.") ~ "1",
+        str_detect(Candidate_Name_Chinese, "^2.") ~ "2",
+        str_detect(Candidate_Name_Chinese, "^3.") ~ "3",
+        str_detect(Candidate_Name_Chinese, "^4.") ~ "4",
+        str_detect(Candidate_Name_Chinese, "^5.") ~ "5",
+        str_detect(Candidate_Name_Chinese, "^6.") ~ "6",
+        TRUE ~ NA_character_
+      )
+  ) %>%
+  # add english translations for candidate names and district names
+  left_join(raw_eng_candid, by = c("District_Code", "Candidate_Number"))
+```
+
+
+
+# 2015 Disco 
+
+```{r}
+##########
+## 2015 ##
+##########
+
+# load raw data
+  path <- "~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2015_district_council_election/party-candidate-info"
+
+# get file names
+  data_files <- list.files(path, full.names = TRUE)
+  
+# loop in all file names to load data
+  for(i in 1:length(data_files)) {                              
+    assign(paste0("party_2015_disco_", i),                                   
+           read.csv(data_files[i]))
+  }
+```
+
+# stack all data files
+
+```{r}
+stacked_raw <-
+    # merge all loaded data sets
+    do.call("rbind", mget(ls(pattern = "^party_2015_disco_*")))
+
+# reset index
+row.names(stacked_raw) <- NULL
+```
+
+# save to csv
+
+```{r}
+write.csv(stacked_raw, "/Users/jiayili/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2015_district_council_election/stacked_party_candidate_info_2015_disco.csv")
+```
+
+
+# 2019 Disco 
+
+```{r}
+##########
+## 2019 ##
+##########
+
+#rm(list = ls())
+
+# load raw data
+  path <- "~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2019_district_council_election/party-candidate-info"
+
+# get file names
+  data_files <- list.files(path, full.names = TRUE)
+  
+# loop in all file names to load data
+  for(i in 1:length(data_files)) {                              
+    assign(paste0("party_2019_disco_", i),                                   
+           read.csv(data_files[i]))
+  }
+```
+
+# stack all data files
+
+```{r}
+stacked_raw <-
+  # if prescribed body 3 is not NA, the column type is different
+  # can't use `do.call`
+  party_2019_disco_1 %>%
+  bind_rows(party_2019_disco_2) %>%
+  bind_rows(party_2019_disco_3) %>%
+  bind_rows(party_2019_disco_4) %>%
+  bind_rows(party_2019_disco_5) %>%
+  bind_rows(party_2019_disco_6) %>%
+  bind_rows(party_2019_disco_7) %>%
+  bind_rows(party_2019_disco_8) %>%
+  bind_rows(party_2019_disco_9) %>%
+  bind_rows(party_2019_disco_10) %>%
+  bind_rows(party_2019_disco_11) %>%
+  bind_rows(party_2019_disco_12) %>%
+  bind_rows(party_2019_disco_13) %>%
+  bind_rows(party_2019_disco_14) %>%
+  bind_rows(party_2019_disco_15) %>%
+  bind_rows(party_2019_disco_16) %>%
+  bind_rows(party_2019_disco_17) %>%
+  bind_rows(party_2019_disco_18) %>%
+  # cleaning: combine info from columns created due to non-standardized column names
+  mutate(
+    `INDEPENDENT.CANDIDATE...NON.AFFILIATED.CANDIDATE` = 
+      case_when(
+        `INDEPENDENT.CANDIDATE....NON.AFFILIATED.CANDIDATE` %in% c("INDEPENDENT CANDIDATE", "NON-AFFILIATED CANDIDATE", "NA") ~ as.character(INDEPENDENT.CANDIDATE....NON.AFFILIATED.CANDIDATE),
+        `INDEPENDENT.CANDIDATE...NON.AFFILIATED` %in% c("INDEPENDENT CANDIDATE", "NON-AFFILIATED CANDIDATE", "NA") ~ as.character(INDEPENDENT.CANDIDATE...NON.AFFILIATED),
+        `INDEPENDENT.CANDIDATE.NON.AFFILIATED` %in% c("INDEPENDENT CANDIDATE", "NON-AFFILIATED CANDIDATE", "NA") ~ as.character(INDEPENDENT.CANDIDATE.NON.AFFILIATED),
+        TRUE ~ as.character(INDEPENDENT.CANDIDATE...NON.AFFILIATED.CANDIDATE)
+      )
+  )  %>%
+  # remove those unwanted columns
+  select(-INDEPENDENT.CANDIDATE....NON.AFFILIATED.CANDIDATE) %>%
+  select(-INDEPENDENT.CANDIDATE...NON.AFFILIATED) %>%
+  select(-INDEPENDENT.CANDIDATE.NON.AFFILIATED)
+```
+
+
+# save a csv
+
+```{r}
+write.csv(stacked_raw, "~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2019_district_council_election/stacked_party_candidate_info_2019_disco.csv")
+```
+
+
