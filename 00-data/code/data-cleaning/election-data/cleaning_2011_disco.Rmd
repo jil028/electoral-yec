@@ -1,0 +1,193 @@
+---
+title: "Cleaning 2011 District Council Election"
+author: "Jiayi Li"
+date: "2022-12-31"
+output: html_document
+---
+Purpose: to clean the election results of the 2011 HK District Council Election at the polling station level.
+To-Do: 
+ -- Merge all excel files 
+ -- Geocode the merged file in Python
+ -- Check for bad coordinates
+ -- Reorder columns
+ 
+```{r}
+# load packages
+source("helper-packages.R")
+
+# load raw data
+  path <- "~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2011_district_council_election/individual_stations"
+  
+# get file names
+  data_files <- list.files(path, full.names = TRUE)
+  
+# loop in all file names to load data
+  for(i in 1:length(data_files)) {                              
+    assign(paste0("hk_2011_disco_", i),                                   
+           rio::import(data_files[i]))
+  }
+  
+# load candidate info
+  path <- "~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2011_district_council_election"
+  
+  party_2011_raw <- 
+    rio::import(glue("{path}/stacked_party_candidate_info_2011_disco.csv")) 
+  names(party_2011_raw) <- tolower(names(party_2011_raw))
+```
+
+# stack all files of election results
+
+```{r}
+# bind rows 
+  hk_2011_dsc_raw <-
+    # merge all loaded data sets
+    do.call("rbind", mget(ls(pattern = "^hk_2011_disco_*")))
+
+# reset index
+  row.names(hk_2011_dsc_raw) <- NULL
+
+# lower column names
+  names(hk_2011_dsc_raw) <- tolower(names(hk_2011_dsc_raw))
+```
+ 
+# reshape and select the candidate data for matching
+
+```{r}
+# pivot wider
+reshaped_hk_2011_disco_candid <-
+  party_2011_raw %>%
+  # note that NA in `candidate_number` indicates that 
+  # that constituency is uncontested
+  drop_na(candidate_number) %>%
+  # recode NAs
+  mutate(
+    political_affiliations_english = 
+      case_when(
+        political_affiliations_english == "NA" ~ NA_character_,
+        TRUE ~ as.character(political_affiliations_english)
+      ),
+    
+    political_ideo = 
+      case_when(
+        political_ideo == "NA" ~ NA_character_,
+        TRUE ~ as.character(political_ideo)
+      ),
+  ) %>%
+  # select variables of interest
+  select(district_code, candidate_number,
+         candidate_name_eng, political_affiliations_english,
+         political_ideo) %>%
+  pivot_wider(
+    id_cols = `district_code`,
+    names_from = `candidate_number`,
+    values_from = c(`candidate_name_eng`, `political_affiliations_english`,
+                    `political_ideo`)
+  )
+
+# select constituency variables for matching
+constituency_info <-
+  party_2011_raw %>%
+  select(district_code, district) %>%
+  distinct(district_code, district)
+```
+
+# cleaning
+
+```{r}
+hk_2011_stacked_joined <-
+  hk_2011_dsc_raw %>%
+  # add constituency variables
+  left_join(constituency_info, by = "district_code") %>%
+  # convert district names to title case
+  mutate(
+    district = str_to_title(district)
+  ) %>%
+  # add party candidate
+  left_join(reshaped_hk_2011_disco_candid, by = "district_code") %>%
+  # convert to numeric
+  mutate_at(c(9:12), as.numeric)
+```
+
+# reorder the columns 
+
+```{r}
+col_order <-
+  c("district",
+    "district_code",
+    "district_name",
+    "chinese_name",
+    "station_code",
+    "chinese_name_poll_station",
+    "name_poll_station",
+    "candidate_name_eng_1", "political_ideo_1", "votes_candidate_1", "political_affiliations_english_1",
+    "candidate_name_eng_2", "political_ideo_2", "votes_candidate_2", "political_affiliations_english_2",
+    "candidate_name_eng_3", "political_ideo_3", "votes_candidate_3", "political_affiliations_english_3",
+    "candidate_name_eng_4", "political_ideo_4", "votes_candidate_4", "political_affiliations_english_4",
+    "candidate_name_eng_5", "political_ideo_5", "votes_candidate_5", "political_affiliations_english_5",
+    "candidate_name_eng_6", "political_ideo_6", "votes_candidate_6", "political_affiliations_english_6"
+  )
+
+# reorder the columns
+not_geocoded_2011_dsc <- 
+  hk_2011_stacked_joined[, col_order] 
+```
+
+# save a version for geocoding in Google Maps API
+
+```{r}
+write.csv(not_geocoded_2011_dsc, glue("{path}/clean_not_geocoded_2011_dsc.csv"),
+          row.names = FALSE)
+```
+
+# clean the geocoded file
+
+```{r}
+# load the raw data
+geocoded_disco_2011 <-
+  read.csv(glue("{path}/geocoded_disco_2011.csv"),
+           na.strings = c("", NA_character_))
+
+# clean 
+clean_geocoded_disco_2011 <-
+  geocoded_disco_2011 %>%
+  rename("ps_gmaps_coords" = gmaps_coords) %>%
+  mutate(
+    # remove brackets in the `ps_gmaps_coords` column
+      ps_gmaps_coords = str_replace_all(ps_gmaps_coords, "\\[|\\]", "")
+    ) %>%
+    # separate the `gmaps_coords` column into two: lat and lon
+    separate(ps_gmaps_coords, into = c("lat", "lon"), sep = ",", remove = FALSE) %>%
+    # check for bad coordinates
+    # Hong Kong SAR lies between Latitude 22°08' North and 22°35' North, 
+    # Longitude 113°49' East and 114°31' East
+    mutate(
+      bad_coords =
+        case_when(
+          as.numeric(lat) < 22|as.numeric(lat) > 23|as.numeric(lon) < 113|as.numeric(lon) > 115 ~ "bad",
+          TRUE ~ "good"
+        )
+    ) %>%
+  # remove `bad names`
+  select(-bad_names)
+```
+
+# save a version for correcting miscoded polling stations
+
+```{r}
+write.csv(clean_geocoded_disco_2011, glue("{path}/handcoding_clean_geocoded_2011_dsc.csv"),
+          row.names = FALSE)
+```
+
+# randomly select a sample for auditing (drop `bad_coords` == bad)
+
+```{r}
+set.seed(123)
+audit_10p_2011_disco <-
+    clean_geocoded_disco_2011 %>%
+    # drop those i manually corrected
+    filter(bad_coords != "bad") %>%
+    # sample ten percent of polling stations for auditing
+    sample_n(45)
+```
+
+ 
