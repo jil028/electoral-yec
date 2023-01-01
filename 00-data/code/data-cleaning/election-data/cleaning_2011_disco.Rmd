@@ -52,7 +52,7 @@ source("helper-packages.R")
 reshaped_hk_2011_disco_candid <-
   party_2011_raw %>%
   # note that NA in `candidate_number` indicates that 
-  # that constituency is uncontested
+  # that constituency was uncontested
   drop_na(candidate_number) %>%
   # recode NAs
   mutate(
