@@ -5,12 +5,7 @@ date: "2022-12-31"
 output: html_document
 ---
 Purpose: to clean the election results of the 2011 HK District Council Election at the polling station level.
-To-Do: 
- -- Merge all excel files 
- -- Geocode the merged file in Python
- -- Check for bad coordinates
- -- Reorder columns
- 
+
 ```{r}
 # load packages
 source("helper-packages.R")
