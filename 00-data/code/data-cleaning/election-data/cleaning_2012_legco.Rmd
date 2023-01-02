@@ -1,0 +1,214 @@
+---
+title: "Cleaning the 2016 Legislative Council Election Data"
+author: "Jiayi Li"
+date: "2023-01-02"
+output: html_document
+---
+Purpose: to clean the election results of the 2016 Legislative Council Election.
+
+Notes: 1. the electoral rule in 2012 --> PR (Hare quota); 2. the polling station starting with LC for each large constituency (Asia Expo) is used for placing misplaced ballots. 
+
+```{r}
+# load packages
+source("helper-packages.R")
+
+# load raw election data
+path <- "~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2012_legislative_council_election/individual_stations"
+
+# get file names
+data_files <- list.files(path, full.names = TRUE)
+
+# loop in all file names to load data
+for(i in 1:length(data_files)) {                              
+  assign(paste0("hk_2012_legco_", i),                                  
+         rio::import(data_files[i]))
+}
+
+# load data for candidate lists and political affiliations
+path <- "~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2012_legislative_council_election"
+
+party_candidate_lists <-
+  read.csv(glue("{path}/2012_legco_candidate_list.csv"))
+
+poli_affiliations <-
+  read.csv(glue("{path}/legco_2012_party_candidate_info.csv"), 
+           na.strings = "NA_character")
+```
+
+# clean and reshape the candidate lists and political affiliations
+
+```{r}
+joined_candidate_list <-
+  party_candidate_lists %>%
+  left_join(poli_affiliations, by = c("lc_code", "list_number")) %>%
+  group_by(lc_code, list_number, votes_received, party_allegiance, poli_ideo) %>%
+  summarise(
+    candidate_names = paste(candidates, collapse = ',')
+  ) %>%
+  pivot_wider(
+    id_cols = "lc_code",
+    names_from = "list_number",
+    values_from = c("candidate_names", "party_allegiance", "poli_ideo")
+  )
+```
+
+# stack all election result files
+
+```{r}
+# bind rows 
+stacked_2012_legco <-
+  # merge all loaded data sets
+  do.call("rbind", mget(ls(pattern = "^hk_2012_legco_*")))
+
+# reset index
+row.names(stacked_2012_legco) <- NULL
+```
+
+# clean the stcaked file
+
+```{r}
+# cleaning and adding party affiliations for each list
+stacked_cleaned_2012_legco <-
+  stacked_2012_legco %>%
+  mutate(
+    # adding general info
+    year = "2012",
+    
+    election_type = "Legislative Council Election",
+    
+    electoral_rule = "Proportional representation",
+    
+    ################
+    # Constituency #
+    ################
+    
+    # add a broad geographical constituency: character (higher)
+    lc_constituency = 
+      case_when(
+         lc_code == "LC1" ~ "Hong Kong Island",
+         lc_code == "LC2" ~ "Kowloon West", 
+         lc_code == "LC3" ~ "Kowloon East", 
+         lc_code == "LC4" ~ "New Territories West", 
+         lc_code == "LC5" ~ "New Territories East", 
+      ),
+    
+    # add a lower geographical constituency: character
+    lower_constituency = 
+      case_when(
+        # drop Asia Expo (used for counting misplaced ballots)
+        id_poll_station %in% c("LC001", "LC002", "LC003", "LC004", "LC005") ~ NA_character_,
+        str_detect(id_poll_station, "^A") ~ "Central & Western",
+        str_detect(id_poll_station, "^B") ~ "Wan Chai",
+        str_detect(id_poll_station, "^C") ~ "Eastern District",
+        str_detect(id_poll_station, "^D") ~ "Southern District",
+        str_detect(id_poll_station, "^E") ~ "Yau Tsim Mong District",
+        str_detect(id_poll_station, "^F") ~ "Sham Shui Po",
+        str_detect(id_poll_station, "^G") ~ "Kowloon City District",
+        str_detect(id_poll_station, "^H") ~ "Wong Tai Sin District",
+        str_detect(id_poll_station, "^J") ~ "Kwun Tong District",
+        str_detect(id_poll_station, "^K") ~ "Tsuen Wan District",
+        str_detect(id_poll_station, "^L") ~ "Tuen Mun District",
+        str_detect(id_poll_station, "^M") ~ "Yuen Long District",
+        str_detect(id_poll_station, "^S") ~ "Kwai Tsing District",
+        str_detect(id_poll_station, "^T") ~ "Islands District",
+        str_detect(id_poll_station, "^N") ~ "North District",
+        str_detect(id_poll_station, "^P") ~ "Tai Po District",
+        str_detect(id_poll_station, "^Q") ~ "Sai Kung District",
+        str_detect(id_poll_station, "^R") ~ "Sha Tin District")
+  ) %>%
+  # join the party affiliations for each list
+  left_join(joined_candidate_list, by = "lc_code") 
+```
+
+# save a version for geocoding
+
+```{r}
+write.csv(stacked_cleaned_2012_legco,
+          glue("{path}/clean_not_geocoded_2012_legco.csv"),
+          row.names = FALSE)
+```
+
+# load the geocoded file
+
+```{r}
+geocoded_legco_2012 <-
+  read.csv(glue("{path}/geocoded_legco_2012.csv"),
+           na.strings = c("", NA_character_))
+```
+
+# clean the geocoded file
+
+```{r}
+cleaned_geocoded_legco_2012 <-
+  geocoded_legco_2012 %>%
+  rename("ps_gmaps_coords" = gmaps_coords) %>%
+  mutate(
+    # remove brackets in the `ps_gmaps_coords` column
+    ps_gmaps_coords = str_replace_all(ps_gmaps_coords, "\\[|\\]", "")
+  ) %>%
+  # separate the `gmaps_coords` column into two: lat and lon
+  separate(ps_gmaps_coords, into = c("lat", "lon"), sep = ",", remove = FALSE) %>%
+  # check for bad coordinates
+  # Hong Kong SAR lies between Latitude 22°08' North and 22°35' North, 
+  # Longitude 113°49' East and 114°31' East
+  mutate(
+    bad_coords =
+      case_when(
+        as.numeric(lat) < 22|as.numeric(lat) > 23|as.numeric(lon) < 113|as.numeric(lon) > 115 ~ "bad",
+        TRUE ~ "good"
+      )
+  ) %>%
+  # remove `bad names`
+  select(-bad_names) %>%
+  # standardize district names
+  mutate(
+    lower_constituency =
+      case_when(
+        lower_constituency %in% c("Central & Western", "Wan Chai", "Sham Shui Po") ~ paste(lower_constituency, "District"),
+        TRUE ~ as.character(lower_constituency)
+      )
+  ) %>%
+  # reorder the columns
+  select(
+    year,
+    election_type,
+    electoral_rule,
+    lc_constituency,
+    lc_code,
+    lower_constituency,
+    id_poll_station,
+    chinese_name_poll_station,
+    english_name_poll_station,
+    ps_gmaps_coords,
+    lat,
+    lon,
+    bad_coords,
+    starts_with("list_"),
+    total,
+    starts_with("poli_ideo_"),
+    starts_with("candidate_names_"),
+    starts_with("party_allegiance_"),
+  )
+```
+
+# save a version for geocoding by hand
+
+```{r}
+write.csv(cleaned_geocoded_legco_2012, 
+          glue("{path}/handcoding_clean_geocoded_2012_legco.csv"),
+          row.names = FALSE)
+```
+
+# randomly select a sample for auditing (drop `bad_coords` == bad)
+
+```{r}
+set.seed(123)
+audit_10p_2012_legco <-
+    cleaned_geocoded_legco_2012 %>%
+    # drop those i manually corrected
+    filter(bad_coords != "bad") %>%
+    # sample ten percent of polling stations for auditing
+    sample_n(55)
+```
+
+
