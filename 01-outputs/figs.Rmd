@@ -12,71 +12,201 @@ Purpose: to clean data and create figures in the background and methods sections
 library(readxl)
 library(tidyverse)
 library(vistime)
+#library(Amelia)
 library(modelsummary)
 library(kableExtra)
 library(glue)
 
-source_dir <- "enter data source directory"
+source_dir <- "/Users/jiayili/Desktop/honors-thesis-main/01-outputs/raw-data"
 ```
 
-# figure: democracy index
-# source of data: The Economic Intelligence Unit (https://info.worldbank.org/governance/wgi/Home/downLoadFile?fileName=EIU.xlsx)
+
+# figure: trend of turnout rates of elections in Hong Kong, 2011-2019
 ```{r}
-##############
-## Figure x ##
-##############
+############
+# Figure x #
+############
 
-# load raw data 
-raw_eiu_dem_index <-
-  read_excel(glue("{source_dir}/EIU.xlsx", sheet = 2))
+# create a tibble for overall turnouts (sources: HK SAR government's websites)
+hk_elections_turnouts <-
+  tribble(
+    ~year, ~type, ~turnout,
+    "2011", "District Council Election", 41.49,
+    "2012", "Legislative Council Election", 53.05, 
+    "2015", "District Council Election", 47.01,
+    "2016", "Legislative Council Election", 58.28,
+    "2019", "District Council Election", 71.23,
+    "2021", "Legislative Council Election", 30.20
+  )
 
-# clean data 
-hk_dem_index_raw <-
-  raw_eiu_dem_index %>%
-  # subset to only include data for hong kong
-  filter(country == "Hong Kong SAR, China") %>%
-  # convert numeric variables to characters
-  mutate_all(as.character) %>%
-  # reshape data
-  pivot_longer(
-    cols = starts_with("EIU"),
-    values_to = "value"
-  ) %>%
-  # subset to only include indexes for `voice and accountability`
-  filter(str_detect(name, "VA")) %>%
+plt_trend_turnouts <- 
+  hk_elections_turnouts %>%
+  ggplot(aes(x = year, y = turnout, label = turnout)) + 
+  geom_point(stat = "identity", color = "steelblue4", 
+             fill = "steelblue4", size = 11)  +
+  geom_segment(aes(y = 0, 
+                   x = year, 
+                   yend = turnout, 
+                   xend = year), 
+               color = "steelblue4") +
+  geom_text(color = "white", size = 3) +
+  labs(y = "Cumulative turnourt rate (%)",
+       x = "") +
+  theme_bw() +
+  ylim(0, 90) +
+  facet_wrap(~type, nrow = 2, scales = "free_y",
+             labeller = as_labeller(c("District Council Election" = "District Council Elections",
+                                      "Legislative Council Election" = "Legislative Council Elections")))+
+  coord_flip() +
+  theme(axis.text = element_text(size = 14),
+        strip.text = element_text(size = 14),
+        axis.title.x = element_text(size = 14))
+```
+
+
+# figure: electoral democracy index
+# source: v-dem (https://v-dem.net/data/the-v-dem-dataset/country-year-v-dem-core/)
+
+```{r}
+############
+# Figure x #
+############
+
+vdem_raw <-
+  read.csv(glue("{source_dir}/Country_Year_V-Dem_Core_CSV_v12/V-Dem-CY-Core-v12.csv"))
+
+vdem_hk_raw <-
+  vdem_raw %>%
+  filter(country_name == "Hong Kong") %>%
+  filter(year >= 1980)
+
+# set the label function for significant digits
+scaleFUN <- function(x) sprintf("%.1f", x)
+
+# plot
+plt_elect_dem_index <- 
+  vdem_hk_raw %>%
+  ggplot(aes(x = year, y = v2x_polyarchy)) +
+  geom_line() +
+  geom_point() +
+  scale_y_continuous(labels = scaleFUN, limits = c(0, 1)) +
+  # annotate important events
+  geom_vline(xintercept = 1997, linetype = 2, color = "coral3") +
+  annotate("text", x = 2003.5, y = 0.8, 
+           label = "1997: Handover of Hong Kong",
+           colour = "coral3", size = 5) +
+  geom_vline(xintercept = 2014, linetype = 2, color = "coral3") +
+  annotate("text", x = 2008, y = 0.15, 
+           label = "2014: Umbrella Movement",
+           colour = "coral3", size = 5) +
+  # adjust themes
+  theme_bw() +
+  theme(axis.text.x = element_text(size = 14),
+        axis.text.y = element_text(size = 14),
+        axis.title.y = element_text(size = 14),
+        axis.title.x = element_blank()) +
+  ylab("Electoral democracy index")
+```
+
+
+# figure: heatmaps
+
+```{r}
+############
+# Figure x #
+############
+
+# load raw hk map
+hk_shp <- 
+  read_sf("~/Dropbox/Mac/Downloads/Hong_Kong_18_Districts (1)/HKDistrict18.shp") %>%
+  # standardize administrative district names
   mutate(
-    # parse the 2-digit year variable
-    year_2dig = substr(name, 4, 5),
-    # create a four-digits year variable
-    year_4dig = 
+    ENAME = paste(ENAME, "DISTRICT"),
+    ENAME = 
       case_when(
-        str_detect(year_2dig, "^9") ~ paste0("19", year_2dig),
-        TRUE ~ paste0("20", year_2dig)
+        row_number() == 6 ~ "CENTRAL AND WESTERN DISTRICT",
+        row_number() == 17 ~ "DAI PO DISTRICT",
+        TRUE ~ as.character(ENAME)
       )
   )
 
-plt_dem_index <- 
-  hk_dem_index_raw %>%
-  ggplot(aes(x = as.numeric(year_4dig), y = as.numeric(value), group = 1)) +
-  geom_line() +
-  geom_point() +
-  # annotate important events
-  geom_vline(xintercept = 1997, linetype = 2, color = "coral3") +
-  annotate("text", x = 2002.5, y = 0.7, 
-           label = "1997: Handover of Hong Kong",
-           colour = "coral3") +
-  geom_vline(xintercept = 2014, linetype = 2, color = "coral3") +
-  annotate("text", x = 2010, y = 0.55, 
-           label = "2014: Umbrella Movement",
-           colour = "coral3") +
-  # adjust themes
+# load final openrice data sets
+df_openrice <- read.csv()
+
+df_openrice <-
+  final_openrice %>%
+  mutate(
+    ENAME = str_to_upper(dce_constituency)
+  ) 
+
+op_total_df <- 
+  df_openrice %>%
+  group_by(ENAME) %>%
+  summarise(total_restaurants = n()) %>%
+  ungroup() %>%
+  st_drop_geometry()
+
+op_count_df <- 
+  df_openrice %>%
+  group_by(ENAME, ideo_text) %>%
+  summarise(n_restaurants = n()) %>%
+  ungroup() %>%
+  st_drop_geometry()
+
+# keep only yellow restaurants
+df_openrice <-
+  left_join(op_count_df, op_total_df, by = "ENAME") %>%
+  mutate(
+    prop = n_restaurants / total_restaurants
+  ) %>%
+  filter(ideo_text == "Yellow")
+
+out <-
+  hk_shp %>%
+  left_join(df_openrice, by = "ENAME")
+
+heatmap_yellow <-
+  ggplot(out) +
+  geom_sf(aes(fill = prop)) +
+  scale_fill_gradient(low = "white", high = "gold") +
   theme_bw() +
-  theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust = 1, size = 12),
-        axis.text.y = element_text(size = 12),
-        axis.title.y = element_text(size = 12),
-        axis.title.x = element_blank()) +
-  ylab("Voice and Accountability Index")
+  labs(
+    fill = ''
+  ) +
+  theme(legend.text = element_text(size=8))
+  
+pdf('heatmap_yellow.pdf', width = 9, height = 4.5)
+heatmap_yellow
+dev.off()
+
+
+# keep only blue restaurants
+df_openrice <-
+  left_join(op_count_df, op_total_df, by = "ENAME") %>%
+  mutate(
+    prop = n_restaurants / total_restaurants
+  ) %>%
+  filter(ideo_text == "Blue")
+
+out <-
+  hk_shp %>%
+  left_join(df_openrice, by = "ENAME")
+
+heatmap_blue <-
+  ggplot(out) +
+  geom_sf(aes(fill = prop)) +
+  scale_fill_gradient(low = "white", high = "cornflowerblue") +
+  theme_bw() +
+  labs(
+    fill = ''
+  ) +
+  theme(legend.text = element_text(size=8))
+
+pdf('heatmap_blue.pdf', width = 9, height = 4.5)
+heatmap_blue
+dev.off()
 ```
+
 
 # figure: grouped bar chart of politicized restaurants by political ideology
 
@@ -161,4 +291,29 @@ timeline_2019 <-
                   size = 4, 
                   color = "black")
 ```
+
+
+# figure: protest sites
+# source: HKU
+
+```{r}
+protests <-
+  read_sf("/Users/jiayili/Desktop/honors-thesis-main/01-outputs/raw-data/event_v2/event.shp")
+
+protest_map <-
+  ggplot() +
+  geom_sf(data = hk_shp) +
+  geom_sf(data = out, aes(fill = prop)) +
+  scale_fill_gradient(low = "white", high = "gold") +
+  geom_sf(data = protests, shape = 9, color = "orangered3", 
+          size = 2, alpha = 0.5) +
+  theme_bw() +
+  labs(
+    fill = ''
+  ) +
+  theme(legend.text = element_text(size=8))
+```
+
+
+
 
