@@ -1,0 +1,150 @@
+---
+output: rmarkdown::latex_document
+---
+
+
+```{r}
+# load packages
+library(tidyverse)
+library(kableExtra)
+library(psych)
+
+# load unique party lists
+
+uni_2019 <-
+  read.csv("~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2019_district_council_election/uni_party_list_2019_disco.csv",
+           na.strings = c("", NA)) %>%
+  # remove `*` in party names
+  mutate(
+    first_affiliation = str_replace(first_affiliation, '\\*', '')
+  ) %>%
+  rename("party_allegiance" = first_affiliation) %>%
+  distinct()
+
+uni_2015 <-
+  read.csv("~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2015_district_council_election/uni_party_list_2015_disco.csv",
+           na.strings = c("", NA))  %>%
+  rename("party_allegiance" = organization_1)
+
+```
+
+```{r}
+# stack the data
+out <-
+  uni_2019 %>%
+  bind_rows(uni_2015) %>%
+  mutate(
+    party_allegiance = str_replace(party_allegiance, '\\*', '')
+  ) %>%
+  distinct() %>%
+  filter(!is.na(party_allegiance)) %>%
+  filter(!row_number() %in% c(48)) %>%
+  mutate(
+    poli_ideo =
+      case_when(
+        is.na(poli_ideo) ~ "neutral/unknown",
+        TRUE ~ as.character(poli_ideo)
+      )
+  ) %>%
+  distinct(party_allegiance, poli_ideo)
+
+write.csv(out, "temp_party_out.csv", row.names = FALSE)
+```
+
+```{r}
+out <- 
+  read.csv("/Users/jiayili/Desktop/honors-thesis-main/01-outputs/temp_party_out.csv") %>% 
+  distinct() %>%
+  filter(!row_number() %in% c(37, 39, 50)) %>%
+  mutate(
+    party_allegiance = str_to_title(party_allegiance)
+  )
+
+# declare caption
+  cap <- 
+    "\\label{tab:benchmark}Major Political Parties/Organizations in Hong Kong"
+  
+# print table
+  out %>%
+    kable(
+      "latex",
+      booktabs = T,
+      escape = F,
+      longtable = T,
+      col.names = linebreak(c(
+        "Party/Organization",
+        "Political Ideology")),
+      align = c("l", rep("l", 2)),
+        caption = cap,
+        linesep = "") %>%
+    kable_styling(
+      font_size = 10,
+      latex_options = c(
+        "scale_down",
+        "hold_position",
+        "striped"))
+```
+
+# summary statistics: restaurant data
+
+```{r}
+openrice_raw <-
+  read.csv("/Users/jiayili/Desktop/honors-thesis-main/00-data/raw-data/raw-restaurant-data/openrice_final_raw.csv") %>%
+  separate(price, into = c("low_price", "high_price"), sep = "-", remove = FALSE) %>%
+  mutate(
+    low_price = str_replace(low_price, "\\$", ""),
+    high_price = str_replace(high_price, "\\$", ""),
+    high_price = as.numeric(high_price),
+    low_price =
+      case_when(
+        low_price == "50以下" ~ 50,
+        TRUE ~ as.numeric(low_price)
+      )
+  )
+# 
+# openrice_sub <-
+#   openrice_raw %>%
+#   select(
+#     store_status, rating, low_price, high_price, chain_store_indicator, ideo_bi
+#   )
+# 
+# out <- as.data.frame(
+#   describe(openrice_sub)
+#   ) 
+# 
+# out <- rownames_to_column(out, "variable")
+# 
+# out <-
+#   out %>%
+#   select(variable, n, mean, sd, median, min, max) %>%
+#   mutate(
+#     mean = round(mean, 2),
+#     sd = round(sd, 2)
+#   )
+# 
+# # print table
+#   out %>%
+#     kable(
+#       "latex",
+#       booktabs = T,
+#       escape = F,
+#       longtable = T,
+#       col.names = linebreak(c(
+#         "Variable",
+#         "n",
+#         "Mean",
+#         "Std. Dev",
+#         "Median",
+#         "Minimum",
+#         "Maximum")),
+#       align = c("l", rep("l", 7)),
+#         caption = cap,
+#         linesep = "") %>%
+#     kable_styling(
+#       font_size = 10,
+#       latex_options = c(
+#         "scale_down",
+#         "hold_position"))
+
+```
+

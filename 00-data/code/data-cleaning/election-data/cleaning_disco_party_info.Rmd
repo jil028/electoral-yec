@@ -1,11 +1,11 @@
 ---
-title: "Cleaning Party Candidate Info for Disco Election"
+title: "Cleaning Party Candidate Info for HK Elections"
 author: "Jiayi Li"
 date: "2022-12-24"
 output: html_document
 ---
 
-Purpose: to clean the party candidate info for the district council elections between 2011 and 2019.
+Purpose: to clean the party candidate info for elections between 2011 and 2021.
 
 ```{r}
 # load packages
@@ -34,9 +34,8 @@ source("helper-packages.R")
   
 # load data for english candidate names and constituency names
 # source: HKSAR gov website
-  source_dir <- "~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2011_district_council_election"
   raw_eng_candid <-
-    rio::import(glue("{source_dir}/2011_DCE_Valid_Nominations_E.xls")) %>%
+    rio::import("~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2011_district_council_election/2011_DCE_Valid_Nominations_E.xls") %>%
     rename("District_Code" = "DCCA Code",
            "Candidate_Number" = "Candidate No.",
            "Candidate_Name_Eng" = "Name") %>%
@@ -62,8 +61,16 @@ ls_uni_affiliations <-
   stacked_raw %>%
   distinct(`政治聯繫`)
 
-write_csv(ls_uni_affiliations, "~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2011_district_council_election/poli_affiliations_2011.csv")
+#write_csv(ls_uni_affiliations, "~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2011_district_council_election/poli_affiliations_2011.csv")
 ```
+
+# load the handcoded file for political affiliations
+
+```{r}
+poli_affi_2011 <-
+  rio::import("~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2011_district_council_election/poli_affiliations_2011.xlsx")
+```
+
 
 # cleaning and translation
 
@@ -90,7 +97,15 @@ stacked_clean <-
       )
   ) %>%
   # add english translations for candidate names and district names
-  left_join(raw_eng_candid, by = c("District_Code", "Candidate_Number"))
+  left_join(raw_eng_candid, by = c("District_Code", "Candidate_Number")) %>%
+  # add political affiliations
+  left_join(poli_affi_2011, by = "Political_Affiliations")
+```
+
+# save to csv
+
+```{r}
+write.csv(stacked_clean, "~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2011_district_council_election/stacked_party_candidate_info_2011_disco.csv", row.names = FALSE)
 ```
 
 
@@ -202,4 +217,71 @@ stacked_raw <-
 write.csv(stacked_raw, "~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2019_district_council_election/stacked_party_candidate_info_2019_disco.csv")
 ```
 
+# 2021 Legco
+
+```{r}
+##########
+## 2021 ##
+##########
+
+#rm(list = ls())
+
+# load raw data
+  path <- "~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2021_legislative_council_election/party-candidate-info"
+
+# get file names
+  data_files <- list.files(path, full.names = TRUE)
+  
+# loop in all file names to load data
+  for(i in 1:length(data_files)) {                              
+    assign(paste0("party_2021_legco_", i),                                   
+           read.csv(data_files[i]))
+  }
+```
+
+# stack all data files
+
+```{r}
+stacked_raw <-
+    # merge all loaded data sets
+    do.call("rbind", mget(ls(pattern = "^party_2021_legco_*")))
+
+# reset index
+row.names(stacked_raw) <- NULL
+```
+
+# clean the data
+
+```{r}
+stacked_clean <-
+  stacked_raw %>%
+  select(
+    lc_code,
+    "candidate_number" = `候選人編號.Candidate.Number`,
+    "name_candidate" = `Name.of.Candidate`,
+    "party_allegiance" = `Prescribed.Body.1`
+  )
+```
+
+# get the unique party list
+
+```{r}
+uni_party_list_2021_legco <- as.data.frame(
+  unique(stacked_clean$party_allegiance)
+)
+```
+
+# save
+
+```{r}
+path <- "~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2021_legislative_council_election"
+
+write.csv(uni_party_list_2021_legco, 
+          glue("{path}/uni_party_list_2021_legco.csv"),
+          row.names = FALSE)
+
+write.csv(stacked_clean, 
+          glue("{path}/stacked_candidate_list_2021_legco.csv"),
+          row.names = FALSE)
+```
 

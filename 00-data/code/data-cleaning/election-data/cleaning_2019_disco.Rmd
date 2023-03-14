@@ -13,10 +13,6 @@ To-Do:
  -- Check for bad coordinates (done)
  -- Reorder columns (done)
  
-```{r setup, include=FALSE}
-rm(list = ls())
-knitr::opts_chunk$set(echo = TRUE)
-```
 
 # load packages and raw data
 
@@ -192,5 +188,120 @@ audit_10p_2019_disco <-
     filter(bad_coords != "bad") %>%
     # sample ten percent of polling stations for auditing
     sample_n(61)
+```
+
+# clean and join candidates' political affiliations
+
+```{r}
+# set the path
+path <- "/Users/jiayili/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2019_district_council_election"
+
+# load the election results
+geocoded_2019_disco_raw <-
+  read.csv(glue("{path}/handgeocoded_2019_disco.csv"),
+           na.strings = c("", NA))
+
+# load the party candidate list
+party_candidates_2019_disco <-
+  read.csv(glue("{path}/stacked_party_candidate_info_2019_disco.csv"),
+           na.strings = c("", NA)) %>%
+  # drop the index column and alias
+  select(-X, -Alias.of.Candidate) %>%
+  # standardize variable names
+  select(
+    "district_code" = `Code.of.Constituency.Area`,
+    "district_name" = `Name.of.Constituency.Area`,
+    "candidate_number" = `Candidate.Number`,
+    "party_allegiance" = `Prescribed.Body.1`,
+    "independent" = `INDEPENDENT.CANDIDATE...NON.AFFILIATED.CANDIDATE`
+  )
+
+# load political ideology data
+ls_poli_ideo_2015 <-
+  read.csv(glue("{path}/uni_party_list_2019_disco.csv")) %>%
+  # standardize the variable for matching
+  rename("party_allegiance" = first_affiliation) %>%
+  # make a unique list
+  distinct()
+```
+
+# join the political candidate list with the political ideology data
+
+```{r}
+joined_party_candidates <-
+  party_candidates_2019_disco %>%
+  left_join(ls_poli_ideo_2015, by = "party_allegiance") %>%
+  # fix those mistakes caused by an apostrophe
+  mutate(
+    poli_ideo =
+      case_when(
+        party_allegiance == "NEW PEOPLE’S PARTY" ~ "pro-democracy",
+        party_allegiance == "EAST KOWLOON DISTRICT\nRESIDENTS’ COMMITTEE" ~  "pro-establishment",
+        TRUE ~ as.character(poli_ideo)
+      ),
+    
+    # standardize
+    district_name = str_to_upper(district_name)
+  ) %>%
+  # reshape the list
+  pivot_wider(
+    id_cols = c("district_code", "district_name"),
+    names_from = "candidate_number",
+    values_from = c("party_allegiance", "poli_ideo")
+  )
+```
+
+# join the election result file
+
+```{r}
+clean_handgeocoded_2019_disco <-
+  geocoded_2019_disco_raw %>%
+  left_join(joined_party_candidates, by = c("district_code", "district_name")) %>%
+  # separate the `gmaps_coords` column into two: lat and lon
+  separate(ps_gmaps_coords, into = c("lat", "lon"), sep = ",", remove = FALSE) %>%
+  # add general info and standardize district names
+  mutate(
+    year = "2019",
+    
+    election_type = "District Council Election",
+    
+    electoral_rule = "First-past-the-post",
+    
+    # standardize district names
+    constituency =
+      case_when(
+        constituency %in% c("Central & Western", "Wan Chai", "Sham Shui Po") ~ paste(constituency, "District"),
+        TRUE ~ as.character(constituency)
+      )
+  ) %>%
+  # reorder the columns (drop `bad_coords`)
+  select(
+    year,
+    election_type,
+    electoral_rule,
+    "district" = constituency,
+    district_code,
+    district_name,
+    chinese_name,
+    district_name,
+    station_code,
+    chinese_name_poll_station,
+    name_poll_station,
+    ps_gmaps_coords,
+    lat,
+    lon,
+    starts_with("votes_candidate_"),
+    starts_with("poli_ideo_"),
+    starts_with("name_candidate_"),
+    starts_with("party_allegiance")
+  )
+```
+
+# write a final csv
+
+```{r}
+write.csv(clean_handgeocoded_2019_disco,
+          "/Users/jiayili/Desktop/honors-thesis-main/00-data/cleaned-data/election-data/final_clean_2019_disco.RDS",
+          row.names = FALSE)
 ```
 

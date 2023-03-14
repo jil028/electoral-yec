@@ -5,7 +5,12 @@ date: "2022-12-31"
 output: html_document
 ---
 Purpose: to clean the election results of the 2011 HK District Council Election at the polling station level.
-
+To-Do: 
+ -- Merge all excel files [Done]
+ -- Geocode the merged file in Python [Done]
+ -- Check for bad coordinates [Done]
+ -- Reorder columns [Done]
+ 
 ```{r}
 # load packages
 source("helper-packages.R")
@@ -184,5 +189,30 @@ audit_10p_2011_disco <-
     # sample ten percent of polling stations for auditing
     sample_n(45)
 ```
+
+# standardize the column order for the hand-geocoded file
+
+```{r}
+# load the raw data
+handgeocoded_2011_disco <-
+  read.csv(glue("{path}/handcoded_cleaned_2011_disco.csv")) 
+
+# final cleaning
+final_clean_2011_disco <-
+  handgeocoded_2011_disco %>%
+  # reorder the columns
+  relocate(ps_gmaps_coords, lat, lon, .after = name_poll_station) %>%
+  # drop the coordinate verification column
+  select(-bad_coords)
+```
+
+# save as csv
+
+```{r}
+write.csv(final_clean_2011_disco,
+          "~/Desktop/honors-thesis-main/00-data/cleaned-data/election-data/final_clean_2011_disco.csv",
+          row.names = FALSE)
+```
+
 
  

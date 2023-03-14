@@ -111,4 +111,196 @@ reshaped_hk_2015_disco_candid <-
 write.csv(clean_not_geocoded_2015_dsc, "/Users/jiayili/Dropbox/senior-thesis/01-code/working-data/clean_not_geocoded_2015_dsc.csv")
 ```
 
+# load the geocoded file 
+
+```{r}
+geocoded_2015_disco_raw <-
+  read.csv("~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2015_district_council_election/geocoded_disco_2015.csv")
+```
+
+# clean the geocoded file
+
+```{r}
+clean_geocoded_2015_disco <-
+  geocoded_2015_disco_raw %>%
+  mutate(
+    # adding general info
+    year = "2015",
+    
+    election_type = "District Council Election",
+    
+    electoral_rule = "First-past-the-post",
+    
+    # standardizing the constituency variable again
+    constituency =
+      case_when(
+        constituency %in% c("Central & Western", "Wan Chai", "Sham Shui Po") ~ paste(constituency, "District"),
+        TRUE ~ as.character(constituency)
+      ),
+    
+    # remove brackets in the `ps_gmaps_coords` column
+    ps_gmaps_coords = str_replace_all(ps_gmaps_coords, "\\[|\\]", "")
+  ) %>%
+  # separate the `gmaps_coords` column into two: lat and lon
+  separate(ps_gmaps_coords, into = c("lat", "lon"), sep = ",", remove = FALSE) %>%
+  # check for bad coordinates
+  # Hong Kong SAR lies between Latitude 22°08' North and 22°35' North, 
+  # Longitude 113°49' East and 114°31' East
+  mutate(
+    bad_coords =
+      case_when(
+        as.numeric(lat) < 22|as.numeric(lat) > 23|as.numeric(lon) < 113|as.numeric(lon) > 115 ~ "bad",
+        TRUE ~ "good"
+      )
+  ) %>%
+  # remove `bad names`
+  select(-bad_names) %>%
+  # move the columns
+  relocate(year, election_type, electoral_rule) %>%
+  relocate(ps_gmaps_coords, lat, lon, bad_coords, .after = name_poll_station)
+```
+
+# save a version for hand geocoding
+
+```{r}
+write.csv(clean_geocoded_2015_disco,
+          "~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2015_district_council_election/handcoding_2015_disco.csv",
+          row.names = FALSE)
+```
+
+# randomly select a sample for auditing (drop `bad_coords` == bad)
+
+```{r}
+set.seed(123)
+audit_10p_2015_disco <-
+    clean_geocoded_2015_disco %>%
+    # drop those i manually corrected
+    filter(bad_coords != "bad") %>%
+    # sample ten percent of polling stations for auditing
+    sample_n(49)
+```
+
+# adding party allegiance
+# note that only the first affiliated organization listed is used
+
+```{r}
+# set the path
+path <- "/Users/jiayili/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2015_district_council_election"
+
+# load hand geocoded data
+handgeocoded_2015_disco_raw <-
+  read.csv(glue("{path}/handgeocoded_2015_disco.csv"))
+
+# load the party candidate list and political ideology
+party_candidates_2015_disco <-
+  read.csv(glue("{path}/stacked_party_candidate_info_2015_disco.csv"),
+           na.strings = c("", NA)) %>%
+  # drop the index column and alias
+  select(-X, -Candidate.Name..Alias.) %>%
+  # standardize variable names
+  select(
+    "district_code" = `Constituency.Code`,
+    "district_name" = `Constituency`,
+    "candidate_number" = `Candidate.No`,
+    "party_allegiance" = `Organization.1`,
+    "independent" = `INDEPENDENT.CANDIDATE...NON.AFFILIATED.CANDIDATE`
+  )
+
+# load political ideologies for parties
+ls_poli_ideo <-
+  read.csv(glue("{path}/uni_party_list_2015_disco.csv")) %>%
+  # standardize the variable for matching
+  rename("party_allegiance" = organization_1) %>%
+  # make a unique list
+  distinct()
+
+# load the vote share list 
+candidate_shares_2015_disco <-
+  read.csv(glue("{path}/hk2015_district_election_candidate_shares.csv")) %>%
+  # keep variables of interest
+  select(-X, -No..of.Votes.Received) %>%
+  # standardize variable names
+  select(
+    "district_code" = `Constituency.Code`,
+    "district_name" = `Constituency`,
+    "candidate_number" = `Candidate.Number`,
+    "name_candidate" = `Name.of.Candidate`
+  ) %>%
+  # standardize
+  mutate(
+    candidate_number = as.numeric(candidate_number)
+  )
+```
+
+# join the political ideology data with the party candidate list
+
+```{r}
+unmatched_party_candidates <-
+  party_candidates_2015_disco %>%
+  anti_join(ls_poli_ideo, by = "party_allegiance")
+
+joined_party_candidates <-
+  party_candidates_2015_disco %>%
+  left_join(ls_poli_ideo, by = "party_allegiance") %>%
+  # fix those mistakes caused by an apostrophe
+  mutate(
+    poli_ideo =
+      case_when(
+        party_allegiance == "NEW PEOPLE’S PARTY" ~ "pro-democracy",
+        party_allegiance == "EAST KOWLOON DISTRICT\nRESIDENTS’ COMMITTEE" ~  "pro-establishment",
+        TRUE ~ as.character(poli_ideo)
+      ),
+    
+    # standardize
+    district_name = str_to_upper(district_name)
+  ) %>%
+  # join the share list
+  left_join(candidate_shares_2015_disco, by = c("district_code", "district_name", "candidate_number")) %>%
+  # reshape the list
+  pivot_wider(
+    id_cols = c("district_code", "district_name"),
+    names_from = "candidate_number",
+    values_from = c("party_allegiance", "poli_ideo", "name_candidate")
+)
+```
+
+# join the election result file
+
+```{r}
+clean_handgeocoded_2015_disco_raw <-
+  handgeocoded_2015_disco_raw %>%
+  left_join(joined_party_candidates, by = c("district_code", "district_name")) %>%
+  # separate the `gmaps_coords` column into two: lat and lon
+  separate(ps_gmaps_coords, into = c("lat", "lon"), sep = ",", remove = FALSE) %>%
+  # reorder the columns
+  select(
+    year,
+    election_type,
+    electoral_rule,
+    "district" = constituency,
+    district_code,
+    district_name,
+    chinese_name,
+    district_name,
+    station_code,
+    chinese_name_poll_station,
+    name_poll_station,
+    ps_gmaps_coords,
+    lat,
+    lon,
+    starts_with("votes_candidate_"),
+    starts_with("poli_ideo_"),
+    starts_with("name_candidate_"),
+    starts_with("party_allegiance")
+  )
+```
+
+# write a final version
+
+```{r}
+write.csv(clean_handgeocoded_2015_disco_raw,
+          "/Users/jiayili/Desktop/honors-thesis-main/00-data/cleaned-data/election-data/final_clean_2015_disco.csv",
+          row.names = FALSE)
+```
+
 
