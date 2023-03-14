@@ -1,0 +1,78 @@
+---
+title: "Cleaning OpenRice final data"
+output: html_document
+---
+
+```{r}
+# load restaurant data
+openrice_raw <- 
+  read.csv("/Users/jiayili/Desktop/honors-thesis-main/00-data/raw-data/raw-restaurant-data/openrice_final_raw.csv")
+
+removal <-
+  read.csv("/Users/jiayili/Desktop/honors-thesis-main/00-data/raw-data/raw-restaurant-data/openrice_removal.csv") 
+
+removal_clean <-
+  removal %>%
+  dplyr::select(district, restaurant_name) %>%
+  rename("temp_restaurant_name" = restaurant_name) %>%
+  mutate(
+    bi_remove = 1
+  )
+```
+
+# cleaning
+
+```{r}
+# standardize restaurant names by extracting trational chinese characters only
+# regular expression to match Traditional Chinese characters
+tc_regex <- "[\\u4E00-\\u9FFF\\u3400-\\u4DBF]"
+
+openrice_clean <-
+  openrice_raw %>%
+  mutate(
+    temp_restaurant_name = str_extract_all(restaurant_name, tc_regex) %>% lapply(paste, collapse = "") %>% unlist(),
+    # clean
+    temp_restaurant_name = gsub('已結業', '', temp_restaurant_name),
+    # extract only traditional characters
+    temp_restaurant_name =
+      case_when(
+        temp_restaurant_name == "" ~ as.character(restaurant_name),
+        TRUE ~ as.character(temp_restaurant_name)
+      ),
+    
+    temp_restaurant_name = gsub('已結業', '', temp_restaurant_name),
+    # remove parentheses 
+    temp_restaurant_name = gsub("[()]", "", temp_restaurant_name),
+  ) %>%
+  relocate(temp_restaurant_name, .after = restaurant_name)
+```
+
+# join the removal list and create geometries
+# saved as RDS
+```{r}
+final_openrice <-
+  openrice_clean %>%
+  left_join(removal_clean, by = c("district", "temp_restaurant_name")) %>%
+  # remove those on the list
+  filter(is.na(bi_remove)) %>%
+  # remove closed restaurants
+  filter(store_status == 1) %>%
+  st_as_sf(coords = c("lon", "lat"),
+           crs = st_crs(4326))
+```
+
+
+# create a data frame for robustness checks: keep those closed
+
+```{r}
+openrice_robustness_check <-
+  openrice_clean %>%
+  left_join(removal_clean, by = c("district", "temp_restaurant_name")) %>%
+  # remove those on the list
+  filter(is.na(bi_remove)) %>%
+  st_as_sf(coords = c("lon", "lat"),
+           crs = st_crs(4326))
+```
+
+
+
