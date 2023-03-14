@@ -155,8 +155,6 @@ write.csv(stacked_raw, "/Users/jiayili/Desktop/honors-thesis-main/00-data/raw-da
 ## 2019 ##
 ##########
 
-#rm(list = ls())
-
 # load raw data
   path <- "~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2019_district_council_election/party-candidate-info"
 
