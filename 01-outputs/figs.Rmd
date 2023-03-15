@@ -2,22 +2,21 @@
 title: "Visualization: Figures"
 output: html_document
 ---
-Purpose: to clean data and create figures in the background and methods sections of the partial thesis.
+Purpose: to clean data and create figures in the background and results sections of the thesis.
 
 # load packages
 
 ```{r}
-library(readxl)
-library(tidyverse)
-library(vistime)
-library(Amelia)
-library(modelsummary)
-library(kableExtra)
-library(glue)
-library(wesanderson)
-library(cowplot)
-library(patchwork)
+library(glue) # glue strings
+library(readxl) # read excel
+library(tidyverse) # data cleaning
+library(vistime) # create timelines
+library(Amelia) # create missingness maps
+library(wesanderson) # palettes from wes anderson movies for nerds
+library(cowplot) # put plots side by side
+library(patchwork) # put plots side by side
 
+# set path to data
 source_dir <- "/Users/jiayili/Desktop/honors-thesis-main/01-outputs/raw-data"
 ```
 
