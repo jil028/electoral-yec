@@ -17,6 +17,7 @@ library(lfe)
 library(ggpubr)
 library(cowplot)
 library(forestplot)
+library(wesanderson)
 
 # geographical analysis
 library(sf)
@@ -24,9 +25,7 @@ library(sp)
 library(leaflet)
 library(ggmap)
 library(googleway)
-
-# python
-library(reticulate)
+library(lwgeom)
 
 # model summary/latex
 library(kableExtra)
