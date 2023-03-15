@@ -1,7 +1,5 @@
 ---
-title: "Visualization: Partial Thesis"
-author: "Jiayi Li"
-date: "2022-11-18"
+title: "Visualization: Figures"
 output: html_document
 ---
 Purpose: to clean data and create figures in the background and methods sections of the partial thesis.
@@ -12,16 +10,19 @@ Purpose: to clean data and create figures in the background and methods sections
 library(readxl)
 library(tidyverse)
 library(vistime)
-#library(Amelia)
+library(Amelia)
 library(modelsummary)
 library(kableExtra)
 library(glue)
+library(wesanderson)
+library(cowplot)
+library(patchwork)
 
 source_dir <- "/Users/jiayili/Desktop/honors-thesis-main/01-outputs/raw-data"
 ```
 
 
-# figure: trend of turnout rates of elections in Hong Kong, 2011-2019
+# figure: trend of turnout rates of elections in Hong Kong, 2011-2019----------
 ```{r}
 ############
 # Figure x #
@@ -39,6 +40,7 @@ hk_elections_turnouts <-
     "2021", "Legislative Council Election", 30.20
   )
 
+# make the plot
 plt_trend_turnouts <- 
   hk_elections_turnouts %>%
   ggplot(aes(x = year, y = turnout, label = turnout)) + 
@@ -64,7 +66,7 @@ plt_trend_turnouts <-
 ```
 
 
-# figure: electoral democracy index
+# figure: electoral democracy index---------------------------------------------
 # source: v-dem (https://v-dem.net/data/the-v-dem-dataset/country-year-v-dem-core/)
 
 ```{r}
@@ -72,12 +74,15 @@ plt_trend_turnouts <-
 # Figure x #
 ############
 
+# load v-dem data
 vdem_raw <-
   read.csv(glue("{source_dir}/Country_Year_V-Dem_Core_CSV_v12/V-Dem-CY-Core-v12.csv"))
 
 vdem_hk_raw <-
   vdem_raw %>%
+  # subset to include hk only
   filter(country_name == "Hong Kong") %>%
+  # subset to those only after 1980
   filter(year >= 1980)
 
 # set the label function for significant digits
@@ -109,7 +114,7 @@ plt_elect_dem_index <-
 ```
 
 
-# figure: heatmaps
+# figure: heatmaps--------------------------------------------------------------
 
 ```{r}
 ############
@@ -118,7 +123,7 @@ plt_elect_dem_index <-
 
 # load raw hk map
 hk_shp <- 
-  read_sf("~/Dropbox/Mac/Downloads/Hong_Kong_18_Districts (1)/HKDistrict18.shp") %>%
+  read_sf(glue("{source_dir}/Hong_Kong_18_Districts (1)/HKDistrict18.shp")) %>%
   # standardize administrative district names
   mutate(
     ENAME = paste(ENAME, "DISTRICT"),
@@ -131,26 +136,32 @@ hk_shp <-
   )
 
 # load final openrice data sets
-df_openrice <- read.csv()
+df_openrice <- 
+  read_csv("~/Desktop/honors-thesis-main/00-data/cleaned-data/restaurant-data/final_openrice.csv")
 
 df_openrice <-
   final_openrice %>%
+  # standardize district names and the variable name
   mutate(
     ENAME = str_to_upper(dce_constituency)
   ) 
 
+# find the number of total restaurants in a district (18 large administrative district)
 op_total_df <- 
   df_openrice %>%
   group_by(ENAME) %>%
   summarise(total_restaurants = n()) %>%
   ungroup() %>%
+  # drop geometries
   st_drop_geometry()
 
+# count numbers of restaurants in a district by political ideology
 op_count_df <- 
   df_openrice %>%
   group_by(ENAME, ideo_text) %>%
   summarise(n_restaurants = n()) %>%
   ungroup() %>%
+  # drop geometries
   st_drop_geometry()
 
 # keep only yellow restaurants
@@ -161,6 +172,7 @@ df_openrice <-
   ) %>%
   filter(ideo_text == "Yellow")
 
+# data frame for plotting
 out <-
   hk_shp %>%
   left_join(df_openrice, by = "ENAME")
@@ -174,7 +186,8 @@ heatmap_yellow <-
     fill = ''
   ) +
   theme(legend.text = element_text(size=8))
-  
+
+# save  
 pdf('heatmap_yellow.pdf', width = 9, height = 4.5)
 heatmap_yellow
 dev.off()
@@ -188,6 +201,7 @@ df_openrice <-
   ) %>%
   filter(ideo_text == "Blue")
 
+# data frame for plotting
 out <-
   hk_shp %>%
   left_join(df_openrice, by = "ENAME")
@@ -202,13 +216,14 @@ heatmap_blue <-
   ) +
   theme(legend.text = element_text(size=8))
 
+# save  
 pdf('heatmap_blue.pdf', width = 9, height = 4.5)
 heatmap_blue
 dev.off()
 ```
 
 
-# figure: grouped bar chart of politicized restaurants by political ideology
+# figure: grouped bar chart of politicized restaurants by political ideology----
 
 ```{r}
 ##############
@@ -259,7 +274,7 @@ bar_by_ideo <-
     xlab(" ")
 ```
 
-# figure: timeline of the development of the YEC
+# figure: timeline of the development of the YEC -------------------------------
 
 ```{r}
 ##############
@@ -293,7 +308,7 @@ timeline_2019 <-
 ```
 
 
-# figure: protest sites
+# figure: locationns of protest sites ------------------------------------------
 # source: HKU
 
 ```{r}
@@ -314,6 +329,230 @@ protest_map <-
   theme(legend.text = element_text(size=8))
 ```
 
+
+# ------------------------------------------------------------------------------
+# visualize analysis outputs
+
+```{r}
+# load analysis data frame
+# set the path
+path <- "~/Desktop/honors-thesis-main/00-data/cleaned-data"
+
+# load analysis data frame
+df_analysis <-
+  readRDS(glue("{path}/df-analysis.RDS"))
+```
+
+
+
+# plot: parallel trends assumptions -------------------------------------------
+
+```{r}
+# subset to only include data from 2019
+df_2019 <-
+  df_analysis %>%
+  filter(year == 2019)
+
+# get the median proportion of yellow restaurants in a joined district
+median_prop_yellow <- median(df_2019$prop_Yellow, na.rm = T)
+
+# create treatment and control groups
+# ="Treatment"-->larger than the median above
+group <-
+  df_2019 %>%
+  mutate(
+    group =
+      case_when(
+        prop_Yellow >= median_prop_yellow ~ "Treatment",
+        TRUE ~ "Control"
+      )
+  ) %>%
+  select(fake_unit_id, group)
+
+# join the main data frame
+df_parallel <-
+  df_analysis %>%
+  left_join(group, by = "fake_unit_id") %>%
+  group_by(year, group) %>%
+  # get the mean votes for different ideological groups by year and by group
+  summarise(
+    mean_prop_votes_demo = mean(prop_votes_demo, na.rm = TRUE),
+    mean_prop_votes_est = mean(prop_votes_est, na.rm = TRUE),
+    mean_prop_turnours = mean(sum_joined_dist_total, na.rm = TRUE)
+  )
+```
+
+```{r}
+# set ticks and tick labels
+ticks <- c(2011, 2015, 2019)
+tick_labels <- c("2011", "2015", "2019")
+  
+plt_parallel_trends_votes_demo <-
+  df_parallel %>%
+  ggplot(aes(x = year, y = mean_prop_votes_demo, color = group)) +
+  geom_point() +
+  geom_line(linewidth = 1) +
+  geom_vline(xintercept = 2017, linetype = 2, color = "black") +
+  scale_x_continuous(breaks = ticks, labels = tick_labels) +
+  ylim(c(0, 0.5)) +
+  ylab("Vote shares: pro-democracy") +
+  # recode the legend
+  scale_color_manual(name = "Group",
+                     labels = c("Control", "Treatment"),
+                     values = wes_palette("Royal1")) +
+  theme_bw() +
+  theme(
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(size = 14),
+    axis.title.y = element_text(size = 14),
+    axis.text.y = element_text(size = 12),
+    legend.direction = "horizontal", 
+    legend.position = "bottom",
+    legend.box = "horizontal",
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 12)
+  )
+
+plt_parallel_trends_votes_est <-
+  df_parallel %>%
+  ggplot(aes(x = year, y = mean_prop_votes_est, color = group)) +
+  geom_point() +
+  geom_line(linewidth = 1) +
+  geom_vline(xintercept = 2017, linetype = 2, color = "black") +
+  scale_x_continuous(breaks = ticks, labels = tick_labels) +
+  ylim(c(0, 0.5)) +
+  ylab("Vote shares: pro-Beijing") +
+  # recode the legend
+  scale_color_manual(name = "Group",
+                     labels = c("Control", "Treatment"),
+                     values = wes_palette("Royal1")) +
+  theme_bw() +
+  theme(
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(size = 14),
+    axis.title.y = element_text(size = 14),
+    axis.text.y = element_text(size = 12),
+    legend.direction = "horizontal", 
+    legend.position = "bottom",
+    legend.box = "horizontal",
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 12)
+  )
+
+
+plt_parallel_trends_turnouts <-
+  df_parallel %>%
+  ggplot(aes(x = year, y = mean_prop_turnours, color = group)) +
+  geom_point() +
+  geom_line(linewidth = 1) +
+  geom_vline(xintercept = 2017, linetype = 2, color = "black") +
+  scale_x_continuous(breaks = ticks, labels = tick_labels) +
+  ylab("Turnouts: total votes cast") +
+  # recode the legend
+  scale_color_manual(name = "Group",
+                     labels = c("Control", "Treatment"),
+                     values = wes_palette("Royal1")) +
+  theme_bw() +
+  theme(
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(size = 14),
+    axis.title.y = element_text(size = 14),
+    axis.text.y = element_text(size = 12),
+    legend.direction = "horizontal", 
+    legend.position = "bottom",
+    legend.box = "horizontal",
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 12)
+  )
+
+# put them together
+plt_parallel_trends <-
+  plot_grid(plt_parallel_trends_votes_demo, plt_parallel_trends_votes_est, plt_parallel_trends_turnouts, labels = c('A', 'B', "C"), ncol = 3)
+```
+
+
+
+# correlation analysis: prop. of restaurants vs. # of protests in 2019----------
+
+```{r}
+# turn off s2
+sf::sf_use_s2(FALSE)
+# load protest sites data in 2019
+protest_sites <-
+  read_sf("~/Desktop/honors-thesis-main/01-outputs/raw-data/event_v2/event.shp")
+
+# get the frequency of protests in a location in 2019
+freq_protests <-
+  protest_sites %>%
+  group_by(location) %>%
+  summarise(freq_protest = n())
+
+# spatial join and group by joined district
+joined_protest_sites <-
+  st_join(st_as_sf(freq_protests), st_as_sf(df_analysis)) %>%
+  filter(year == 2019) %>%
+  select(year, fake_unit_id, location, freq_protest, prop_Yellow, prop_votes_demo) %>%
+  group_by(fake_unit_id) %>%
+  summarize(n_protests = n()) %>%
+  st_drop_geometry()
+
+# data frame
+df_corr <-
+  df_analysis %>%
+  filter(year == 2019) %>%
+  left_join(joined_protest_sites, by = "fake_unit_id") %>%
+  select(fake_unit_id, n_protests, prop_Yellow, prop_votes_demo)
+
+# get correlations
+# close to no correlation...
+cor(df_corr$n_protests, df_corr$prop_Yellow, use = "complete.obs") # 0.09
+
+cor(df_corr$n_protests, df_corr$prop_votes_demo, use = "complete.obs") # 0.02
+
+# plots
+plt_cor_protests_prop_yellow <-
+  df_corr %>%
+  ggplot(aes(x = n_protests, y = prop_Yellow)) +
+  geom_point(colour = "gold", size = 2, shape = 19) +
+  geom_smooth(method = "lm", aes(color = "sienna1")) +
+  ylim(c(0, 1)) +
+  annotate("text", x = 30, y = 0.85, 
+           label = "r = 0.09",
+           colour = "black", size = 5) +
+  labs(x = "Number of protests", y = 'Prop. of "Yellow" restaurants') +
+  theme_bw() +
+    theme(
+    axis.title.x = element_text(size = 14),
+    axis.text.x = element_text(size = 14),
+    axis.title.y = element_text(size = 14),
+    axis.text.y = element_text(size = 14),
+    legend.position = "none"
+  )
+
+plt_cor_protests_votes_demo <-
+  df_corr %>%
+  ggplot(aes(x = n_protests, y = prop_votes_demo)) +
+  geom_point(colour = "gold", size = 2, shape = 19) +
+  geom_smooth(method = "lm", aes(color = "sienna1")) +
+  ylim(c(0, 1)) +
+  annotate("text", x = 30, y = 0.85,
+           label = "r = 0.02",
+           colour = "black", size = 5) +
+  labs(x = "Number of protests", y = 'Vote shares: pro-democracy') +
+  theme_bw() +
+  theme(
+    axis.title.x = element_text(size = 14),
+    axis.text.x = element_text(size = 14),
+    axis.title.y = element_text(size = 14),
+    axis.text.y = element_text(size = 14),
+    legend.position = "none"
+  )
+
+# put them together  
+plt_cor_protests <-
+  plot_grid(plt_cor_protests_prop_yellow, plt_cor_protests_votes_demo, labels = c('A', 'B'))
+  
+```
 
 
 
