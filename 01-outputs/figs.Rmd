@@ -2,7 +2,7 @@
 title: "Visualization: Figures"
 output: html_document
 ---
-Purpose: to clean data and create figures in the background and methods sections of the partial thesis.
+Purpose: to clean data and create figures in the background and results sections of the thesis.
 
 # load packages
 
@@ -720,9 +720,6 @@ out <- data.frame(
   upper = c(tidy(hte1_a, conf.int = TRUE)$conf.high, tidy(hte1_b, conf.int = TRUE)$conf.high,
             tidy(hte2_a, conf.int = TRUE)$conf.high, tidy(hte2_b, conf.int = TRUE)$conf.high)
 )
-
-  
-  
 
 ```
 
