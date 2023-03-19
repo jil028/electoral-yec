@@ -2,21 +2,23 @@
 title: "Visualization: Figures"
 output: html_document
 ---
-Purpose: to clean data and create figures in the background and results sections of the thesis.
+Purpose: to clean data and create figures in the background and methods sections of the partial thesis.
 
 # load packages
 
 ```{r}
-library(glue) # glue strings
-library(readxl) # read excel
-library(tidyverse) # data cleaning
-library(vistime) # create timelines
-library(Amelia) # create missingness maps
-library(wesanderson) # palettes from wes anderson movies for nerds
-library(cowplot) # put plots side by side
-library(patchwork) # put plots side by side
+library(readxl)
+library(tidyverse)
+library(forestplot)
+library(vistime)
+library(Amelia)
+library(modelsummary)
+library(kableExtra)
+library(glue)
+library(wesanderson)
+library(cowplot)
+library(patchwork)
 
-# set path to data
 source_dir <- "/Users/jiayili/Desktop/honors-thesis-main/01-outputs/raw-data"
 ```
 
@@ -552,6 +554,203 @@ plt_cor_protests <-
   plot_grid(plt_cor_protests_prop_yellow, plt_cor_protests_votes_demo, labels = c('A', 'B'))
   
 ```
+
+
+# ROBUSTNESS CHECKS SECTION-----------------------------------------------------
+
+# plot subgroup effects --------------------------------------------------------
+
+# subgroup 1: restaurant density
+
+```{r}
+# load analysis data frame
+df_hte1_analysis <-
+  readRDS(glue("{path}/df_hte1_analysis.RDS")) %>%
+  dplyr::select(-grouped_geometry)
+
+df_hte1_analysis$group <- factor(df_hte1_analysis$group, level = c("Above Median", "Below Median"))
+```
+
+# run analysis
+```{r}
+# fit DiD models for the two groups
+
+# above median
+hte1_a <- 
+  felm(prop_votes_demo ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = df_hte1_analysis, subset = group == "Above Median")
+# below median
+hte1_b <- 
+  felm(prop_votes_demo ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = df_hte1_analysis, subset = group == "Below Median")
+
+```
+
+
+```{r}
+# coef_table_hte1 <- data.frame(
+#   subgroup = "Restaurant density (per 10,000 people)",
+#   
+#   group = c("Below Median", "Above Median"),
+#   
+#   coef = c(coef(hte1)["prop_Yellow:groupBelow Median"],
+#            coef(hte1)["prop_Yellow"] + coef(hte1)["prop_Yellow:groupBelow Median"]),
+#   
+#   se = c(sqrt(diag(vcov(hte1))["prop_Yellow:groupBelow Median"]),
+#          sqrt(diag(vcov(hte1))["prop_Yellow"] + diag(vcov(hte1))["prop_Yellow:groupBelow Median"])),
+#   
+#   pvalue = c(summary(hte1)$coefficients["prop_Yellow:groupBelow Median", "Pr(>|t|)"],
+#              summary(hte1)$coefficients["prop_Yellow", "Pr(>|t|)"]),
+#   
+#   N = c(table(df_hte1_analysis$group)[1], table(df_hte1_analysis$group)[2]),
+#   
+#   lower = c(coef(hte1)["prop_Yellow:groupBelow Median"] - 1.96*sqrt(diag(vcov(hte1))["prop_Yellow:groupBelow Median"]),
+#             (coef(hte1)["prop_Yellow"] + coef(hte1)["prop_Yellow:groupBelow Median"]) - 1.96*sqrt(diag(vcov(hte1))["prop_Yellow"] + diag(vcov(hte1))["prop_Yellow:groupBelow Median"])),
+#   
+#   upper = c(coef(hte1)["prop_Yellow:groupBelow Median"] + 1.96*sqrt(diag(vcov(hte1))["prop_Yellow:groupBelow Median"]),
+#             (coef(hte1)["prop_Yellow"] + coef(hte1)["prop_Yellow:groupBelow Median"]) + 1.96*sqrt(diag(vcov(hte1))["prop_Yellow"] + diag(vcov(hte1))["prop_Yellow:groupBelow Median"]))
+# )
+```
+
+
+
+
+# subgroup 2: historically pro-democracy district
+
+```{r}
+# subset to only include 2011 and 2015 data
+hist_pro_demo_indicator <-
+  df_analysis %>%
+  filter(year %in% c(2011, 2015)) %>%
+  group_by(fake_unit_id) %>%
+  summarise(hist_mean_prop_votes_demo = mean(prop_votes_demo)) 
+
+df_hte2_analysis <-
+  df_analysis %>%
+  left_join(hist_pro_demo_indicator, by = "fake_unit_id") %>%
+  mutate(
+    group = 
+      case_when(
+        hist_mean_prop_votes_demo >= median(hist_mean_prop_votes_demo, na.rm = T) ~ "Above median", ... = hist_mean_prop_votes_demo < median(hist_mean_prop_votes_demo, na.rm = T) ~ "Below median", TRUE ~ NA_character_)
+  )
+```
+
+# run analysis
+
+```{r}
+# fit DiD model for the two groups
+
+# above median
+hte2_a <- 
+  felm(prop_votes_demo ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = df_hte2_analysis, subset = group == "Above median")
+
+# below median
+hte2_b <- 
+  felm(prop_votes_demo ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = df_hte2_analysis, subset = group == "Below median")
+```
+
+
+
+```{r}
+# get coef table 
+# hte2 <- 
+#   felm(prop_votes_demo ~ prop_Yellow*group|year + fake_unit_id|0|fake_unit_id, 
+#        data = df_hte2_analysis)
+# df_hte2_analysis$group <- relevel(factor(df_hte2_analysis$group), ref = "Yes")
+# coef_table_hte2 <- data.frame(
+#   subgroup = "Historically pro-democracy district",
+#   
+#   group = c("Yes", "No"),
+#   
+#   coef = c(coef(hte2)["prop_Yellow:groupYes"],
+#            coef(hte2)["prop_Yellow"] + coef(hte2)["prop_Yellow:groupYes"]),
+#   
+#   se = c(sqrt(diag(vcov(hte2))["prop_Yellow:groupYes"]),
+#          0.08727),
+#   
+#   pvalue = c(summary(hte2)$coefficients["prop_Yellow:groupYes", "Pr(>|t|)"],
+#              0.000442),
+#   
+#   N = c(table(df_hte2_analysis$group)[2], table(df_hte2_analysis$group)[1]),
+#   
+#   lower = c(coef(hte2)["prop_Yellow:groupYes"] - 1.96*sqrt(diag(vcov(hte2))["prop_Yellow:groupYes"]),
+#             (coef(hte2)["prop_Yellow"] + coef(hte2)["prop_Yellow:groupYes"]) - 1.96*sqrt(diag(vcov(hte2))["prop_Yellow"] + diag(vcov(hte2))["prop_Yellow:groupYes"])),
+#   
+#   upper = c(coef(hte2)["prop_Yellow:groupYes"] + 1.96*sqrt(diag(vcov(hte2))["prop_Yellow:groupYes"]),
+#             (coef(hte2)["prop_Yellow"] + coef(hte2)["prop_Yellow:groupYes"]) + 1.96*sqrt(diag(vcov(hte2))["prop_Yellow"] + diag(vcov(hte2))["prop_Yellow:groupYes"]))
+# )
+
+# stack the data
+
+# stacked_coef_table <-
+#   coef_table_hte1 %>%
+#   bind_rows(coef_table_hte2)
+```
+
+
+# create the df for plotting
+```{r}
+out <- data.frame(
+  # group titles
+  subgroup = c("Restaurant density (per 10,000 people)", "Restaurant density (per 10,000 people)",
+               "Historical pro-democracy vote share", "Historical pro-democracy vote share"),
+  # subgroup names
+  group = c("Above median", "Below median", "Above median", "Below median"),
+  # estimates
+  coef = c(coef(hte1_a)["prop_Yellow"], coef(hte1_b)["prop_Yellow"],
+           coef(hte2_a)["prop_Yellow"], coef(hte2_b)["prop_Yellow"]),
+  # standard errors
+  se = c(sqrt(diag(vcov(hte1_a))["prop_Yellow"]), sqrt(diag(vcov(hte1_b))["prop_Yellow"]),
+         sqrt(diag(vcov(hte2_a))["prop_Yellow"]), sqrt(diag(vcov(hte2_b))["prop_Yellow"])),
+  # p-value
+  pvalue = c(summary(hte1_a)$coefficients["prop_Yellow", "Pr(>|t|)"],
+             summary(hte1_b)$coefficients["prop_Yellow", "Pr(>|t|)"],
+             summary(hte2_a)$coefficients["prop_Yellow", "Pr(>|t|)"],
+             summary(hte2_b)$coefficients["prop_Yellow", "Pr(>|t|)"]),
+  # sample size
+  N = c(hte1_a$N, hte1_b$N,
+        hte2_a$N, hte2_b$N),
+  
+  # 95% CI
+  lower = c(tidy(hte1_a, conf.int = TRUE)$conf.low, tidy(hte1_b, conf.int = TRUE)$conf.low,
+            tidy(hte2_a, conf.int = TRUE)$conf.low, tidy(hte2_b, conf.int = TRUE)$conf.low),
+  
+  upper = c(tidy(hte1_a, conf.int = TRUE)$conf.high, tidy(hte1_b, conf.int = TRUE)$conf.high,
+            tidy(hte2_a, conf.int = TRUE)$conf.high, tidy(hte2_b, conf.int = TRUE)$conf.high)
+)
+
+  
+  
+
+```
+
+
+# plot hte
+
+```{r}
+scaleFUN <- function(x) sprintf("%.4f", x)
+
+plt_hte <-
+  ggplot(aes(x = coef, y = group), data = out) +
+  geom_point(size = 2) +
+  geom_errorbarh(aes(xmin = lower, xmax = upper), 
+                 size = 0.5, height = 0.2) +
+  geom_vline(xintercept = 0, linetype = 2, color = "darkgrey") +
+  facet_wrap(~ subgroup, scales = "free_y", nrow = 2) +
+  geom_text(aes(x = 0.65, 
+                label = paste0(N, " (p = ", scaleFUN(pvalue), ")")), size = 4, position = position_dodge(0.6)) +
+  xlim(c(-1, 1)) +
+  labs(x = "Estimated treatment effect on pro-democracy vote shares", y = " ") +
+  theme_bw() +
+  theme(
+    axis.text = element_text(size = 12),
+    strip.text = element_text(size = 12),
+    axis.title.x = element_text(size = 12)) 
+```
+
+
 
 
 
