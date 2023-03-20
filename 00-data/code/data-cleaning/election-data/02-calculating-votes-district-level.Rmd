@@ -1,5 +1,5 @@
 ---
-title: "Calculate Votes at the District Level"
+title: "Aggregate Votes at the District Level"
 ---
 
 # load packages and raw data
