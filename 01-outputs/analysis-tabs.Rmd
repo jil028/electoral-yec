@@ -94,8 +94,8 @@ out <- modelsummary(
   gof_map =
     tribble(
       ~raw, ~clean, ~fmt, ~omit,
-      "nobs", "No. of obs.", f2, F,
-      "r.squared", "$R^2$", f1, F),
+      "nobs", "No. of obs.", f2, FALSE,
+      "r.squared", "$R^2$", f1, FALSE),
   output = "data.frame") %>% 
   select(-c(part, statistic)) %>% 
   clean_names() %>%
@@ -107,8 +107,8 @@ out <- modelsummary(
 # latex output  
 out %>%
   kable("latex", 
-        booktabs = T, 
-        escape = F,
+        booktabs = TRUE, 
+        escape = FALSE,
         align = c("l", rep("c", 6)),
         col.names = linebreak(c("", "(1)", "(2)", "(3)", "(4)", "(5)", "(6)"), align = "c"),
         linesep = "") %>% 
@@ -119,7 +119,7 @@ out %>%
   footnote(general = c("*p<0.1; **p<0.05; ***p<0.01"),
            footnote_as_chunk = TRUE, 
            general_title = "",
-           escape = F)
+           escape = FALSE)
 ```
 
 
@@ -355,8 +355,8 @@ out <- modelsummary(
   gof_map =
     tribble(
       ~raw, ~clean, ~fmt, ~omit,
-      "nobs", "No. of obs.", f2, F,
-      "r.squared", "$R^2$", f1, F),
+      "nobs", "No. of obs.", f2, FALSE,
+      "r.squared", "$R^2$", f1, FALSE),
   output = "data.frame") %>% 
   select(-c(part, statistic)) %>% 
   clean_names() %>%
@@ -368,8 +368,8 @@ out <- modelsummary(
 # latex output  
 out %>%
   kable("latex", 
-        booktabs = T, 
-        escape = F,
+        booktabs = TRUE, 
+        escape = FALSE,
         align = c("l", rep("c", 6)),
         col.names = linebreak(c("", "(1)", "(2)", "(3)", "(4)", "(5)", "(6)"), align = "c"),
         linesep = "") %>% 
@@ -380,7 +380,7 @@ out %>%
   footnote(general = c("*p<0.1; **p<0.05; ***p<0.01"),
            footnote_as_chunk = TRUE, 
            general_title = "",
-           escape = F)
+           escape = FALSE)
 ```
 
 
@@ -437,8 +437,8 @@ out <- modelsummary(
   gof_map =
     tribble(
       ~raw, ~clean, ~fmt, ~omit,
-      "nobs", "No. of obs.", f2, F,
-      "r.squared", "$R^2$", f1, F),
+      "nobs", "No. of obs.", f2, FALSE,
+      "r.squared", "$R^2$", f1, FALSE),
   output = "data.frame") %>% 
   clean_names() %>%
   rows_insert(tibble(x = "Year FE", x1 = "Y", x2 = "Y")) %>%
@@ -447,8 +447,8 @@ out <- modelsummary(
 # latex output  
 out %>%
   kable("latex", 
-        booktabs = T, 
-        escape = F,
+        booktabs = TRUE, 
+        escape = FALSE,
         align = c("l", rep("c", 2)),
         col.names = linebreak(c("", "(1)", "(2)"), align = "c"),
         linesep = "") %>% 
@@ -459,7 +459,7 @@ out %>%
   footnote(general = c("*p<0.1; **p<0.05; ***p<0.01"),
            footnote_as_chunk = TRUE, 
            general_title = "",
-           escape = F)
+           escape = FALSE)
 ```
 
 
