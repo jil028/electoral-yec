@@ -1,0 +1,935 @@
+---
+title: "Final Analysis Data Frames"
+output: html_document
+---
+# load cleaned data
+
+```{r}
+# load packages
+source("helper-packages.R")
+
+# set path 
+path <- "~/Desktop/honors-thesis-main/00-data/cleaned-data"
+
+# load stacked shapefiles
+stacked_shp <- 
+  readRDS(glue("{path}/election-data/stacked_shp.RDS"))
+
+# load votes data # dropped uncontested
+votes_district <-
+  readRDS(glue("{path}/election-data/stacked_disco_votes_district.RDS")) %>%
+  # standardize `district_name`
+  rename("ENAME" = district_name)
+
+# load crosswalks with joined districts
+crosswalk <-
+  readRDS(glue("{path}/election-data/clean_crosswalk.RDS"))
+
+# load clean restaurant data
+openrice <-
+  read_csv(glue("{path}/restaurant-data/final_openrice.csv")) 
+
+# load clean restaurant data with "closed" restaurants for robustness checks
+openrice_robustness_check <-
+  readRDS(glue("{path}/restaurant-data/openrice_robustness_check.RDS"))
+
+# load raw dcc projected population data
+pop_2011 <-
+  read.csv(glue("{path}/election-data/district_pop_2011.csv"))
+
+pop_2015 <-
+  read.csv(glue("{path}/election-data/district_pop_2015.csv"))
+
+pop_2019 <-
+  read.csv(glue("{path}/election-data/district_pop_2019.csv"))
+```
+
+# join the election data -------------------------------------------------------
+
+```{r}
+joined_crosswalk_votes <-
+  crosswalk %>%
+  dplyr::select(-geometry) %>%
+  left_join(stacked_shp, by = c("year", "ENAME")) %>%
+  left_join(votes_district, by = c("year", "ENAME", "district_code")) %>%
+  mutate(
+    # uncontested = 0
+    contested = 
+      case_when(
+        district_code == "NA" ~ 0,
+        TRUE ~ 1
+      ),
+    # set crs
+    geometry = st_set_crs(geometry, 4326)
+  ) 
+
+
+joined_districts_shares <-
+  joined_crosswalk_votes %>%
+  group_by(fake_unit_id, year) %>% 
+  summarise(
+    sum_joined_dist_pro_demo = sum(votes_pro_demo, na.rm = TRUE),
+    sum_joined_dist_pro_est = sum(votes_pro_est, na.rm = TRUE),
+    sum_joined_dist_ind = sum(votes_independent, na.rm = TRUE),
+    sum_joined_dist_total = sum(total, na.rm = TRUE),
+    grouped_geometry = st_combine(geometry)
+  ) %>%
+  ungroup() %>%
+  mutate(
+    prop_votes_demo = sum_joined_dist_pro_demo/sum_joined_dist_total,
+    prop_votes_est = sum_joined_dist_pro_est/sum_joined_dist_total,
+    prop_votes_ind = sum_joined_dist_ind/sum_joined_dist_total
+  )
+```
+
+# clean the restaurant data
+
+```{r}
+# get the 2019 district geometries
+joined_districts_geometries_2019 <-
+  dplyr::joined_districts_shares %>%
+  select(fake_unit_id, year, grouped_geometry) %>%
+  filter(year == 2019) %>%
+  mutate(
+    # set crs
+    grouped_geometry = st_set_crs(grouped_geometry, 4326)
+  )
+
+# clean restaurant data
+cleaned_openrice <-
+  openrice %>%
+  # drop
+  dplyr::select(-geometry) %>%
+  separate(gmaps_coords, into = c("lat", "lon"), sep = ",", remove = FALSE) %>%
+  st_as_sf(coords = c("lon", "lat"),
+           crs = st_crs(4326))
+
+# robustness check df
+cleaned_openrice_robustness_check <-
+  openrice_robustness_check %>%
+  # drop
+  select(-geometry) %>%
+  separate(gmaps_coords, into = c("lat", "lon"), sep = ",", remove = FALSE) %>%
+  st_as_sf(coords = c("lon", "lat"),
+           crs = st_crs(4326))
+```
+
+# spatial join and count
+```{r}
+joined_restaurants_districts <-
+  st_join(st_as_sf(joined_districts_geometries_2019), cleaned_openrice) %>%
+  # drop those districts without any restaurants
+  drop_na(source)
+
+# group the data by district and ideology, and count the number of restaurants in each group
+count_df <- 
+  joined_restaurants_districts %>%
+  group_by(fake_unit_id, ideo_text) %>%
+  summarise(n_restaurants = n()) 
+
+# calculate the total number of restaurants in each district
+total_df <- 
+  joined_restaurants_districts %>%
+  group_by(fake_unit_id) %>%
+  summarise(total_restaurants = n()) 
+
+prop_ideo_restaurants <- 
+  left_join(count_df, total_df, by = "fake_unit_id") %>%
+  mutate(
+    prop = n_restaurants / total_restaurants
+  ) %>%
+  pivot_wider(
+    id_cols = "fake_unit_id",
+    names_from = "ideo_text",
+    names_prefix = "prop_",
+    values_from = "prop"
+  ) %>%
+  # clean
+  mutate(
+    prop_Yellow =
+      case_when(
+        prop_Blue == 1 ~ 0,
+        TRUE ~ as.numeric(prop_Yellow)
+      ),
+    
+    prop_Blue = 
+      case_when(
+        prop_Yellow == 1 ~ 0,
+        TRUE ~ as.numeric(prop_Blue)
+      ),
+    
+    # create a binary variable
+    majority_yellow =
+      case_when(
+        prop_Yellow >= 0.5 ~ 1,
+        TRUE ~ 0
+      )
+  ) 
+
+```
+
+# FINAL ANALYSIS DATA FRAME-----------------------------------------------------
+
+```{r}
+df_analysis <-
+  joined_districts_shares %>%
+  left_join(prop_ideo_restaurants, by = "fake_unit_id") %>%
+  # modify
+  # districts without restaurants set to
+  # year == 2011/2015, takes 0
+  # year == 2019, takes whatever i got from `prop_ideo_restaurants`
+  mutate(
+    majority_yellow = 
+      case_when(
+        is.na(majority_yellow) ~ NA_real_,
+        year %in% c(2011, 2015) ~ 0,
+        year == 2019 ~ as.numeric(majority_yellow)
+      ),
+    
+    prop_Yellow = 
+      case_when(
+        is.na(prop_Yellow) ~ NA_real_,
+        year %in% c(2011, 2015) ~ 0,
+        year == 2019 ~ as.numeric(prop_Yellow)
+      ),
+    
+    prop_Blue = 
+      case_when(
+        is.na(prop_Blue) ~ NA_real_,
+        year %in% c(2011, 2015) ~ 0,
+        year == 2019 ~ as.numeric(prop_Blue)
+      )
+  )
+```
+
+
+
+
+# PREP DATA FOR A ROBUSTNESS CHECK  WITH CLOSED RESTAURANT DATA----------------
+
+```{r}
+rc_joined_restaurants_districts <-
+  st_join(st_as_sf(joined_districts_geometries_2019), cleaned_openrice_robustness_check) %>%
+  # drop those districts without any restaurants
+  drop_na(source)
+
+# group the data by district and ideology, and count the number of restaurants in each group
+rc_count_df <- 
+  rc_joined_restaurants_districts %>%
+  group_by(fake_unit_id, ideo_text) %>%
+  summarise(n_restaurants = n()) 
+
+# calculate the total number of restaurants in each district
+rc_total_df <- 
+  rc_joined_restaurants_districts %>%
+  group_by(fake_unit_id) %>%
+  summarise(total_restaurants = n()) 
+
+rc_prop_ideo_restaurants <- 
+  left_join(rc_count_df, rc_total_df, by = "fake_unit_id") %>%
+  mutate(
+    prop = n_restaurants / total_restaurants
+  ) %>%
+  pivot_wider(
+    id_cols = "fake_unit_id",
+    names_from = "ideo_text",
+    names_prefix = "prop_",
+    values_from = "prop"
+  ) %>%
+  # clean
+  mutate(
+    prop_Yellow =
+      case_when(
+        prop_Blue == 1 ~ 0,
+        TRUE ~ as.numeric(prop_Yellow)
+      ),
+    
+    prop_Blue = 
+      case_when(
+        prop_Yellow == 1 ~ 0,
+        TRUE ~ as.numeric(prop_Blue)
+      ),
+    
+    # create a binary variable
+    majority_yellow =
+      case_when(
+        prop_Yellow >= 0.5 ~ 1,
+        TRUE ~ 0
+      )
+  ) 
+
+```
+
+# create a df with closed restaurants for robustness checks
+```{r}
+rc_df_analysis <-
+  joined_districts_shares %>%
+  left_join(rc_prop_ideo_restaurants, by = "fake_unit_id") %>%
+  # modify
+  # districts without restaurants set to
+  # year == 2011/2015, takes 0
+  # year == 2019, takes whatever i got from `prop_ideo_restaurants`
+  mutate(
+    majority_yellow = 
+      case_when(
+        is.na(majority_yellow) ~ NA_real_,
+        year %in% c(2011, 2015) ~ 0,
+        year == 2019 ~ as.numeric(majority_yellow)
+      ),
+    
+    prop_Yellow = 
+      case_when(
+        is.na(prop_Yellow) ~ NA_real_,
+        year %in% c(2011, 2015) ~ 0,
+        year == 2019 ~ as.numeric(prop_Yellow)
+      ),
+    
+    prop_Blue = 
+      case_when(
+        is.na(prop_Blue) ~ NA_real_,
+        year %in% c(2011, 2015) ~ 0,
+        year == 2019 ~ as.numeric(prop_Blue)
+      )
+  )
+```
+
+
+# robustness check 3------------------------------------------------------------
+
+# PREP DATA FOR A ROBUSTNESS CHECK WITH UNCONTESTED DISTRICTS------------------
+
+# extract info for uncontested districts 
+
+```{r}
+uncontested_districts <-
+  joined_crosswalk_votes %>%
+  filter(contested == 0) %>%
+  filter(!(is.na(CACODE))) %>%
+  select(-geometry)
+
+# add 2011
+candidates_2011 <-
+  read.csv("/Users/jiayili/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2011_district_council_election/stacked_party_candidate_info_2011_disco.csv") %>%
+  select(District_Code, Political_Ideo) %>%
+  mutate(
+    year = 2011,
+    Political_Ideo = 
+      case_when(
+        is.na(Political_Ideo) ~ "independent",
+        TRUE ~ as.character(Political_Ideo)
+      )
+  ) %>%
+  rename("CACODE" = District_Code,
+         "uncontested_candidate_ideo" = Political_Ideo) 
+
+
+
+noted_unconstested_districts <-
+  uncontested_districts %>%
+  left_join(candidates_2011, by = c("year", "CACODE")) %>%
+  select(fake_unit_id, year, CACODE, ENAME, district_code, uncontested_candidate_ideo)
+
+# save the object above for handcoing
+
+# write.csv(noted_unconstested_districts, glue("{path}/unconstested_districts.csv"))
+
+```
+
+# load the complete data frame with handcoded ideologies
+
+
+```{r}
+clean_uncontested <-
+  read.csv("/Users/jiayili/Desktop/honors-thesis-main/00-data/cleaned-data/election-data/uncontested_districts - uncontested_districts.csv") %>%
+  dplyr::select(fake_unit_id, year, CACODE, uncontested_candidate_ideo)
+
+# keep only the original districts ---------------------------------------------
+# create another analysis df for this robustness check
+joined_crosswalk_uncontested <-
+  joined_crosswalk_votes %>%
+  left_join(clean_uncontested, by = c("fake_unit_id", "year", "CACODE")) %>%
+  # only for districts that remain unchanged
+  filter(str_detect(fake_unit_id, "^ORIG")) %>%
+  # set votes to 100% if there's a poli ideology
+  mutate(
+    votes_pro_demo = 
+      case_when(
+        uncontested_candidate_ideo == "pro-democracy" ~ 1,
+        TRUE ~ as.numeric(votes_pro_demo)
+      ),
+    
+    votes_pro_est = 
+      case_when(
+        uncontested_candidate_ideo == "pro-establishment" ~ 1,
+        TRUE ~ as.numeric(votes_pro_est)
+      ),
+    
+    votes_independent = 
+      case_when(
+        uncontested_candidate_ideo == "independent" ~ 1,
+        TRUE ~ as.numeric(votes_independent)
+      ),
+    
+    total = 
+      case_when(
+        uncontested_candidate_ideo %in% c("pro-democracy", "pro-establishment", "independent") ~ 1,
+        TRUE ~ as.numeric(total)
+      )
+      
+  )
+
+
+uncontested_joined_districts_shares <-
+  joined_crosswalk_uncontested %>%
+  group_by(fake_unit_id, year) %>% 
+  summarise(
+    sum_joined_dist_pro_demo = sum(votes_pro_demo, na.rm = TRUE),
+    sum_joined_dist_pro_est = sum(votes_pro_est, na.rm = TRUE),
+    sum_joined_dist_ind = sum(votes_independent, na.rm = TRUE),
+    sum_joined_dist_total = sum(total, na.rm = TRUE),
+    grouped_geometry = st_combine(geometry)
+  ) %>%
+  ungroup() %>%
+  mutate(
+    prop_votes_demo = sum_joined_dist_pro_demo/sum_joined_dist_total,
+    prop_votes_est = sum_joined_dist_pro_est/sum_joined_dist_total,
+    prop_votes_ind = sum_joined_dist_ind/sum_joined_dist_total
+  )
+
+
+```
+
+# robustness check 3a: only raw districts
+
+```{r}
+# get the 2019 district geometries
+rc3a_joined_districts_geometries_2019 <-
+  uncontested_joined_districts_shares %>%
+  select(fake_unit_id, year, grouped_geometry) %>%
+  filter(year == 2019) %>%
+  mutate(
+    # set crs
+    grouped_geometry = st_set_crs(grouped_geometry, 4326)
+  )
+
+
+# spatial join and count
+rc3a_joined_restaurants_districts <-
+  st_join(st_as_sf(rc3a_joined_districts_geometries_2019), cleaned_openrice) %>%
+  # drop those districts without any restaurants
+  drop_na(source)
+
+# group the data by district and ideology, and count the number of restaurants in each group
+count_df <- 
+  rc3a_joined_restaurants_districts %>%
+  group_by(fake_unit_id, ideo_text) %>%
+  summarise(n_restaurants = n()) 
+
+# calculate the total number of restaurants in each district
+total_df <- 
+  rc3a_joined_restaurants_districts %>%
+  group_by(fake_unit_id) %>%
+  summarise(total_restaurants = n()) 
+
+prop_ideo_restaurants <- 
+  left_join(count_df, total_df, by = "fake_unit_id") %>%
+  mutate(
+    prop = n_restaurants / total_restaurants
+  ) %>%
+  pivot_wider(
+    id_cols = "fake_unit_id",
+    names_from = "ideo_text",
+    names_prefix = "prop_",
+    values_from = "prop"
+  ) %>%
+  # clean
+  mutate(
+    prop_Yellow =
+      case_when(
+        prop_Blue == 1 ~ 0,
+        TRUE ~ as.numeric(prop_Yellow)
+      ),
+    
+    prop_Blue = 
+      case_when(
+        prop_Yellow == 1 ~ 0,
+        TRUE ~ as.numeric(prop_Blue)
+      ),
+    
+    # create a binary variable
+    majority_yellow =
+      case_when(
+        prop_Yellow >= 0.5 ~ 1,
+        TRUE ~ 0
+      )
+  ) 
+
+```
+
+# ROBUSTNESS CHECK 3A: FINAL ANALYSIS DATA FRAME-----------------------------------------------------
+
+```{r}
+df_rc3a_analysis <-
+  uncontested_joined_districts_shares %>%
+  left_join(prop_ideo_restaurants, by = "fake_unit_id") %>%
+  # modify
+  # districts without restaurants set to
+  # year == 2011/2015, takes 0
+  # year == 2019, takes whatever i got from `prop_ideo_restaurants`
+  mutate(
+    majority_yellow = 
+      case_when(
+        is.na(majority_yellow) ~ NA_real_,
+        year %in% c(2011, 2015) ~ 0,
+        year == 2019 ~ as.numeric(majority_yellow)
+      ),
+    
+    prop_Yellow = 
+      case_when(
+        is.na(prop_Yellow) ~ NA_real_,
+        year %in% c(2011, 2015) ~ 0,
+        year == 2019 ~ as.numeric(prop_Yellow)
+      ),
+    
+    prop_Blue = 
+      case_when(
+        is.na(prop_Blue) ~ NA_real_,
+        year %in% c(2011, 2015) ~ 0,
+        year == 2019 ~ as.numeric(prop_Blue)
+      )
+  )
+```
+
+
+# THIS TIME UNCONTESTED DISTRICTS ARE NOT DROPPED
+# interpolate vote shares
+
+```{r}
+hand_interpolated <-
+  joined_crosswalk_votes %>%
+  left_join(clean_uncontested, by = c("fake_unit_id", "year", "CACODE")) %>%
+  mutate(
+    # set original DCCs to 1
+    votes_pro_demo =
+      case_when(
+        str_detect(fake_unit_id, "^ORIG") & uncontested_candidate_ideo == "pro-democracy" ~ 1,
+        TRUE ~ as.numeric(votes_pro_demo)
+      ),
+    
+    votes_pro_est =
+      case_when(
+        str_detect(fake_unit_id, "^ORIG") & uncontested_candidate_ideo == "pro-establishment" ~ 1,
+        TRUE ~ as.numeric(votes_pro_est)
+      ),
+    
+    votes_independent =
+      case_when(
+        str_detect(fake_unit_id, "^ORIG") & uncontested_candidate_ideo == "independent" ~ 1,
+        TRUE ~ as.numeric(votes_independent)
+      )
+   ) %>%
+  arrange(fake_unit_id, ENAME) %>%
+  select(-geometry)
+
+# sample ad hoc code for imputing values
+# known <- data.frame(
+#   year = c(2011, 2019),
+#   votes = c(4050, 2972)
+# )
+# 
+# mod <- lm(votes~year, data = known)
+# 
+# predict(mod, newdata = list(year = 2015))
+
+
+# select geometry
+geometry_interpolated <-
+  joined_crosswalk_votes %>%
+  select(fake_unit_id, year, CACODE, geometry)
+
+# load manually interpolated data
+interpolated <-
+  read.csv("/Users/jiayili/Desktop/honors-thesis-main/00-data/cleaned-data/election-data/hand_interpolated.csv", na.strings = "NA") %>%
+  left_join(geometry_interpolated, by = c("fake_unit_id", "year", "CACODE"))
+```
+
+
+
+```{r}
+# # clean
+# interpolated_joined_crosswalk_uncontested <-
+#   interpolated %>%
+#   #left_join(clean_uncontested, by = c("fake_unit_id", "year", "CACODE")) %>%
+#   mutate(
+#     votes_pro_demo =
+#       case_when(
+#         str_detect(fake_unit_id, "^ORIG") & uncontested_candidate_ideo == "pro-democracy" ~ 1,
+#         TRUE ~ as.numeric(votes_pro_demo)
+#       ),
+# 
+#     votes_pro_est =
+#       case_when(
+#         str_detect(fake_unit_id, "^ORIG") & uncontested_candidate_ideo == "pro-establishment" ~ 1,
+#         TRUE ~ as.numeric(votes_pro_est)
+#       ),
+# 
+#     votes_independent =
+#       case_when(
+#         str_detect(fake_unit_id, "^ORIG") & uncontested_candidate_ideo == "independent" ~ 1,
+#         TRUE ~ as.numeric(votes_independent)
+#       )
+#    ) %>%
+#    # mutate(
+#    #   votes_pro_demo = round(votes_pro_demo),
+#    #   votes_pro_est = round(votes_pro_est),
+#    #   votes_independent = round(votes_independent)
+#    # ) %>%
+#    mutate(total = rowSums(select(., votes_pro_demo, votes_pro_est, votes_independent), na.rm = TRUE))
+```
+
+
+
+
+```{r}
+interpolated_joined_districts_shares <-
+  interpolated %>%
+  group_by(fake_unit_id, year) %>% 
+  summarise(
+    sum_joined_dist_pro_demo = sum(votes_pro_demo, na.rm = TRUE),
+    sum_joined_dist_pro_est = sum(votes_pro_est, na.rm = TRUE),
+    sum_joined_dist_ind = sum(votes_independent, na.rm = TRUE),
+    sum_joined_dist_total = sum(total, na.rm = TRUE),
+    grouped_geometry = st_combine(geometry)
+  ) %>%
+  ungroup() %>%
+  mutate(
+    prop_votes_demo = sum_joined_dist_pro_demo/sum_joined_dist_total,
+    prop_votes_est = sum_joined_dist_pro_est/sum_joined_dist_total,
+    prop_votes_ind = sum_joined_dist_ind/sum_joined_dist_total
+  )
+```
+
+```{r}
+# get the 2019 district geometries
+uncontested_3b_joined_districts_geometries_2019 <-
+  interpolated_joined_districts_shares %>%
+  select(fake_unit_id, year, grouped_geometry) %>%
+  filter(year == 2019) %>%
+  mutate(
+    # set crs
+    grouped_geometry = st_set_crs(grouped_geometry, 4326)
+  )
+
+# clean restaurant data
+cleaned_openrice <-
+  openrice %>%
+  # drop
+  select(-geometry) %>%
+  separate(gmaps_coords, into = c("lat", "lon"), sep = ",", remove = FALSE) %>%
+  st_as_sf(coords = c("lon", "lat"),
+           crs = st_crs(4326))
+
+
+# spatial join and count
+joined_restaurants_districts <-
+  st_join(st_as_sf(uncontested_3b_joined_districts_geometries_2019), cleaned_openrice) %>%
+  # drop those districts without any restaurants
+  drop_na(source)
+
+# group the data by district and ideology, and count the number of restaurants in each group
+count_df <- 
+  joined_restaurants_districts %>%
+  group_by(fake_unit_id, ideo_text) %>%
+  summarise(n_restaurants = n()) 
+
+# calculate the total number of restaurants in each district
+total_df <- 
+  joined_restaurants_districts %>%
+  group_by(fake_unit_id) %>%
+  summarise(total_restaurants = n()) 
+
+prop_ideo_restaurants <- 
+  left_join(count_df, total_df, by = "fake_unit_id") %>%
+  mutate(
+    prop = n_restaurants / total_restaurants
+  ) %>%
+  pivot_wider(
+    id_cols = "fake_unit_id",
+    names_from = "ideo_text",
+    names_prefix = "prop_",
+    values_from = "prop"
+  ) %>%
+  # clean
+  mutate(
+    prop_Yellow =
+      case_when(
+        prop_Blue == 1 ~ 0,
+        TRUE ~ as.numeric(prop_Yellow)
+      ),
+    
+    prop_Blue = 
+      case_when(
+        prop_Yellow == 1 ~ 0,
+        TRUE ~ as.numeric(prop_Blue)
+      ),
+    
+    # create a binary variable
+    majority_yellow =
+      case_when(
+        prop_Yellow >= 0.5 ~ 1,
+        TRUE ~ 0
+      )
+  ) 
+
+```
+
+
+```{r}
+df_rc3b_analysis <-
+  interpolated_joined_districts_shares %>%
+  left_join(prop_ideo_restaurants, by = "fake_unit_id") %>%
+  # modify
+  # districts without restaurants set to
+  # year == 2011/2015, takes 0
+  # year == 2019, takes whatever i got from `prop_ideo_restaurants`
+  mutate(
+    majority_yellow = 
+      case_when(
+        is.na(majority_yellow) ~ NA_real_,
+        year %in% c(2011, 2015) ~ 0,
+        year == 2019 ~ as.numeric(majority_yellow)
+      ),
+    
+    prop_Yellow = 
+      case_when(
+        is.na(prop_Yellow) ~ NA_real_,
+        year %in% c(2011, 2015) ~ 0,
+        year == 2019 ~ as.numeric(prop_Yellow)
+      ),
+    
+    prop_Blue = 
+      case_when(
+        is.na(prop_Blue) ~ NA_real_,
+        year %in% c(2011, 2015) ~ 0,
+        year == 2019 ~ as.numeric(prop_Blue)
+      )
+  )
+```
+
+
+
+# ------------------------------------------------------------------------------
+
+
+# Constructing data frame to estimate heterogenity effects
+
+# Subgroup 1: Districts with high restaurants to population ratios
+
+```{r}
+# clean population data
+clean_pop_2011 <-
+  pop_2011 %>%
+  dplyr::select(year, district_code, "population" = pop_estimate_2011) %>%
+  # remove space and convert to numeric
+  mutate(
+    population = gsub(" ","", population),
+    population = as.numeric(population)
+  )
+
+clean_pop_2015 <-
+  pop_2015 %>%
+  dplyr::select(year, district_code, "population" = pop_estimate_2015) %>%
+  mutate(
+    # remove big mark and convert to numeric
+    population = gsub(",","", population),
+    population = as.numeric(population)
+  )
+
+clean_pop_2019 <-
+  pop_2019 %>%
+  dplyr::select(year, district_code, "population" = population_2019) %>%
+  # remove space and convert to numeric
+  mutate(
+    population = gsub(" ","", population),
+    population = as.numeric(population)
+  )
+
+# stack population data
+stacked_pop <-
+  clean_pop_2011 %>%
+  bind_rows(clean_pop_2015) %>%
+  bind_rows(clean_pop_2019) %>%
+  # standardize var name
+  rename("CACODE" = district_code)
+
+# join the population data to crosswalk and votes
+pop_added_crosswalk_votes <-
+  joined_crosswalk_votes %>%
+  left_join(stacked_pop, by = c("year", "CACODE"))
+```
+
+
+```{r}
+# calculated vote shares and restaurant density
+pop_joined_districts_shares <-
+  pop_added_crosswalk_votes %>%
+  group_by(fake_unit_id, year) %>% 
+  summarise(
+    sum_joined_dist_pro_demo = sum(votes_pro_demo, na.rm = TRUE),
+    sum_joined_dist_pro_est = sum(votes_pro_est, na.rm = TRUE),
+    sum_joined_dist_ind = sum(votes_independent, na.rm = TRUE),
+    sum_joined_dist_total = sum(total, na.rm = TRUE),
+    sum_population_total = sum(population, na.rm = TRUE),
+    grouped_geometry = st_combine(geometry)
+  ) %>%
+  ungroup() %>%
+  mutate(
+    prop_votes_demo = sum_joined_dist_pro_demo/sum_joined_dist_total,
+    prop_votes_est = sum_joined_dist_pro_est/sum_joined_dist_total,
+    prop_votes_ind = sum_joined_dist_ind/sum_joined_dist_total,
+  )
+
+# get the 2019 district geometries
+pop_added_joined_districts_geometries_2019 <-
+  pop_joined_districts_shares %>%
+  dplyr::select(fake_unit_id, year, grouped_geometry) %>%
+  filter(year == 2019) %>%
+  mutate(
+    # set crs
+    grouped_geometry = st_set_crs(grouped_geometry, 4326)
+  )
+
+# spatial join 
+pop_added_joined_restaurants_districts <-
+  st_join(st_as_sf(pop_added_joined_districts_geometries_2019), cleaned_openrice) %>%
+  # drop those districts without any restaurants
+  drop_na(source)
+
+# group the data by district and ideology, and count the number of restaurants in each group
+count_df <- 
+  pop_added_joined_restaurants_districts %>%
+  group_by(fake_unit_id, ideo_text) %>%
+  summarise(n_restaurants = n()) 
+
+# calculate the total number of restaurants in each district
+total_df <- 
+  pop_added_joined_restaurants_districts %>%
+  group_by(fake_unit_id) %>%
+  summarise(total_restaurants = n()) 
+
+prop_ideo_restaurants <- 
+  left_join(count_df, total_df, by = "fake_unit_id") %>%
+  mutate(
+    prop = n_restaurants / total_restaurants
+  ) %>%
+  pivot_wider(
+    id_cols = "fake_unit_id",
+    names_from = "ideo_text",
+    names_prefix = "prop_",
+    values_from = "prop"
+  ) %>%
+  # clean
+  mutate(
+    prop_Yellow =
+      case_when(
+        prop_Blue == 1 ~ 0,
+        TRUE ~ as.numeric(prop_Yellow)
+      ),
+    
+    prop_Blue = 
+      case_when(
+        prop_Yellow == 1 ~ 0,
+        TRUE ~ as.numeric(prop_Blue)
+      ),
+    
+    # create a binary variable
+    majority_yellow =
+      case_when(
+        prop_Yellow >= 0.5 ~ 1,
+        TRUE ~ 0
+      )
+  ) 
+
+```
+
+
+
+```{r}
+# final analysis data frame-----------------------------------------------------
+df_hte1_analysis <-
+  pop_joined_districts_shares %>%
+  left_join(prop_ideo_restaurants, by = "fake_unit_id") %>%
+  # added total # of restaurants
+  left_join(total_df, by = "fake_unit_id") %>%
+  mutate(
+    total_restaurants = 
+      case_when(
+        year %in% c(2011, 2015) ~ 0,
+        TRUE ~ as.numeric(total_restaurants)
+      )
+  ) %>%
+  # modify
+  # districts without restaurants set to
+  # year == 2011/2015, takes 0
+  # year == 2019, takes whatever i got from `prop_ideo_restaurants`
+  mutate(
+    majority_yellow = 
+      case_when(
+        is.na(majority_yellow) ~ NA_real_,
+        year %in% c(2011, 2015) ~ 0,
+        year == 2019 ~ as.numeric(majority_yellow)
+      ),
+    
+    prop_Yellow = 
+      case_when(
+        is.na(prop_Yellow) ~ NA_real_,
+        year %in% c(2011, 2015) ~ 0,
+        year == 2019 ~ as.numeric(prop_Yellow)
+      ),
+    
+    prop_Blue = 
+      case_when(
+        is.na(prop_Blue) ~ NA_real_,
+        year %in% c(2011, 2015) ~ 0,
+        year == 2019 ~ as.numeric(prop_Blue)
+      ),
+    
+    pop_per_10k = sum_population_total/10000,
+    
+    restaurant_pop_ratio = 
+      case_when(
+        year == 2019 ~ total_restaurants/pop_per_10k,
+        TRUE ~ NA_real_
+      )
+  )
+
+median <- median(df_hte1_analysis$restaurant_pop_ratio, na.rm = TRUE)
+
+# create groups for districts with high densities of restaurants
+df_hte1_analysis <-
+  df_hte1_analysis %>%
+  mutate(
+    temp_ratio_group =
+      case_when(
+        # above median
+        restaurant_pop_ratio >= median ~ "Above Median",
+        restaurant_pop_ratio < median ~ "Below Median",
+        TRUE ~ NA_character_
+      )
+  ) %>%
+  # update the group for those control years
+  group_by(fake_unit_id) %>%
+  mutate(
+    group = ifelse(is.na(temp_ratio_group), temp_ratio_group[year == 2019], temp_ratio_group),
+    factor_group =
+      case_when(
+        group == "Above Median" ~ 1,
+        group == "Below Median" ~ 0,
+        TRUE ~ NA_real_
+      )
+  ) %>%
+  dplyr::select(-c(temp_ratio_group))
+  
+```
+
+
