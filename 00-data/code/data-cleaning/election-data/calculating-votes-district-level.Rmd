@@ -1,0 +1,299 @@
+---
+title: "Calculate Votes at the District Level"
+---
+
+# load packages and raw data
+
+```{r}
+# load packages
+source("helper-packages.R")
+
+# set the path for loading cleaned data
+path <- "~/Desktop/honors-thesis-main/00-data/cleaned-data/election-data"
+
+# load clean election results
+disco_2011 <-
+  read.csv(glue("{path}/final_clean_2011_disco.csv"))
+
+disco_2015 <-
+  read.csv(glue("{path}/final_clean_2015_disco.csv")) %>%
+  # standardize district names
+  mutate(
+    district_name = str_to_title(district_name)
+  )
+
+disco_2019 <-
+  read.csv(glue("{path}/final_clean_2019_disco.csv")) %>%
+  # standardize district names
+  mutate(
+    district_name = str_to_title(district_name)
+  )
+```
+
+# 2011
+
+```{r}
+########
+# 2011 #
+########
+
+shares_disco_2011 <-
+  disco_2011 %>%
+  pivot_longer(
+    cols = starts_with("votes_"),
+    names_to = "candidate_number",
+    names_prefix = "votes_candidate_",
+    values_to = "votes_received"
+  ) %>%
+  drop_na(votes_received) %>%
+  select(
+    year, election_type, electoral_rule,
+    district, district_name, district_code, station_code, name_poll_station, 
+    candidate_number, votes_received
+  )
+
+poli_ideo_2011 <-
+  disco_2011 %>%
+  pivot_longer(
+    cols = starts_with("political_ideo_"),
+    names_to = "candidate_number",
+    names_prefix = "political_ideo_",
+    values_to = "poli_ideo"
+  ) %>%
+  drop_na(poli_ideo) %>%
+  select(
+    district_code, station_code,
+    candidate_number, poli_ideo
+  )
+
+joined_2011 <-
+  shares_disco_2011 %>%
+  left_join(poli_ideo_2011, by = c("district_code", "station_code", "candidate_number"))
+
+
+# calculations: district level
+total_votes <-
+  joined_2011 %>%
+  group_by(district_code, district_name) %>%
+  summarise(total = sum(votes_received))
+
+joined_2011 <-
+  joined_2011 %>%
+  left_join(total_votes, by = "district_code")
+
+partisan_votes_2011 <-
+  joined_2011 %>%
+  group_by(district_code, poli_ideo) %>%
+  summarise(
+    partisan_votes_received = sum(votes_received)
+  ) %>%
+  distinct(poli_ideo, partisan_votes_received) %>%
+  # reshape the data
+  pivot_wider(
+    id_cols = `district_code`,
+    names_from = `poli_ideo`,
+    values_from = `partisan_votes_received`
+  ) %>%
+  rename(
+    "votes_pro_demo" = `pro-democracy`,
+    "votes_pro_est" = `pro-establishment`,
+    "votes_independent" = `NA`
+  )
+
+# join the main election results
+final_disco_2011 <-
+  disco_2011 %>%
+  left_join(partisan_votes_2011, by = c("district_code")) %>%
+  left_join(total_votes, by = c("district_code", "district_name")) %>%
+  # select variables of interest
+  select(
+    year,district_code, district_name,
+    votes_pro_demo, votes_pro_est, votes_independent, total
+  ) %>%
+  distinct()
+```
+
+# 2015
+
+```{r}
+########
+# 2015 #
+########
+
+shares_disco_2015 <-
+  disco_2015 %>%
+  pivot_longer(
+    cols = starts_with("votes_"),
+    names_to = "candidate_number",
+    names_prefix = "votes_candidate_",
+    values_to = "votes_received"
+  ) %>%
+  drop_na(votes_received) %>%
+  select(
+    year, election_type, electoral_rule,
+    district, district_name, district_code, station_code, name_poll_station, 
+    candidate_number, votes_received
+  )
+
+poli_ideo_2015 <-
+  disco_2015 %>%
+  pivot_longer(
+    cols = starts_with("poli_ideo_"),
+    names_to = "candidate_number",
+    names_prefix = "poli_ideo_",
+    values_to = "poli_ideo"
+  ) %>%
+  drop_na(poli_ideo) %>%
+  select(
+    district_code, station_code,
+    candidate_number, poli_ideo
+  )
+
+joined_2015 <-
+  shares_disco_2015 %>%
+  left_join(poli_ideo_2015, by = c("district_code", "station_code", "candidate_number"))
+
+
+# calculations: district level
+total_votes <-
+  joined_2015 %>%
+  group_by(district_code, district_name) %>%
+  summarise(total = sum(votes_received))
+
+joined_2015 <-
+  joined_2015 %>%
+  left_join(total_votes, by = "district_code")
+
+partisan_votes_2015 <-
+  joined_2015 %>%
+  group_by(district_code, poli_ideo) %>%
+  summarise(
+    partisan_votes_received = sum(votes_received)
+  ) %>%
+  distinct(poli_ideo, partisan_votes_received) %>%
+  # reshape the data
+  pivot_wider(
+    id_cols = `district_code`,
+    names_from = `poli_ideo`,
+    values_from = `partisan_votes_received`
+  ) %>%
+  rename(
+    "votes_pro_demo" = `pro-democracy`,
+    "votes_pro_est" = `pro-establishment`,
+    "votes_independent" = `NA`
+  )
+
+# join the main election results
+final_disco_2015 <-
+  disco_2015 %>%
+  left_join(partisan_votes_2015, by = c("district_code")) %>%
+  left_join(total_votes, by = c("district_code", "district_name")) %>%
+  # select variables of interest
+  select(
+    year,district_code, district_name,
+    votes_pro_demo, votes_pro_est, votes_independent, total
+  ) %>%
+  distinct()
+```
+
+# 2019
+
+```{r}
+########
+# 2019 #
+########
+
+shares_disco_2019 <-
+  disco_2019 %>%
+  pivot_longer(
+    cols = starts_with("votes_"),
+    names_to = "candidate_number",
+    names_prefix = "votes_candidate_",
+    values_to = "votes_received"
+  ) %>%
+  drop_na(votes_received) %>%
+  select(
+    year, election_type, electoral_rule,
+    district, district_name, district_code, station_code, name_poll_station, 
+    candidate_number, votes_received
+  )
+
+poli_ideo_2019 <-
+  disco_2019 %>%
+  pivot_longer(
+    cols = starts_with("poli_ideo_"),
+    names_to = "candidate_number",
+    names_prefix = "poli_ideo_",
+    values_to = "poli_ideo"
+  ) %>%
+  drop_na(poli_ideo) %>%
+  select(
+    district_code, station_code,
+    candidate_number, poli_ideo
+  )
+
+joined_2019 <-
+  shares_disco_2019 %>%
+  left_join(poli_ideo_2019, by = c("district_code", "station_code", "candidate_number"))
+
+
+# calculations: district level
+total_votes <-
+  joined_2019 %>%
+  group_by(district_code, district_name) %>%
+  summarise(total = sum(votes_received))
+
+joined_2019 <-
+  joined_2019 %>%
+  left_join(total_votes, by = "district_code")
+
+partisan_votes_2019 <-
+  joined_2019 %>%
+  group_by(district_code, poli_ideo) %>%
+  summarise(
+    partisan_votes_received = sum(votes_received)
+  ) %>%
+  distinct(poli_ideo, partisan_votes_received) %>%
+  # reshape the data
+  pivot_wider(
+    id_cols = `district_code`,
+    names_from = `poli_ideo`,
+    values_from = `partisan_votes_received`
+  ) %>%
+  rename(
+    "votes_pro_demo" = `pro-democracy`,
+    "votes_pro_est" = `pro-establishment`,
+    "votes_independent" = `NA`
+  )
+
+# join the main election results
+final_disco_2019 <-
+  disco_2019 %>%
+  left_join(partisan_votes_2019, by = c("district_code")) %>%
+  left_join(total_votes, by = c("district_code", "district_name")) %>%
+  # select variables of interest
+  select(
+    year,district_code, district_name,
+    votes_pro_demo, votes_pro_est, votes_independent, total
+  ) %>%
+  distinct()
+```
+
+# stack
+
+```{r}
+stacked_votes_disco <-
+  final_disco_2011 %>%
+  bind_rows(final_disco_2015) %>%
+  bind_rows(final_disco_2019)
+```
+
+# save
+
+```{r}
+write_rds(stacked_votes_disco, "/Users/jiayili/Desktop/honors-thesis-main/00-data/cleaned-data/election-data/stacked_disco_votes_district.RDS")
+```
+
+
+
+
