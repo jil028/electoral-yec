@@ -1,0 +1,471 @@
+---
+title: "Analysis and Tables"
+output: rmarkdown::latex_document
+---
+
+```{r include=FALSE, echo=FALSE}
+# load packages
+source("helper-packages.R")
+
+# set the path
+path <- "~/Desktop/honors-thesis-main/00-data/cleaned-data"
+
+# load analysis data frame
+df_analysis <-
+  readRDS(glue("{path}/df-analysis.RDS"))
+
+# load an analysis data frame for robustness check with closed restaurants
+rc_df_analysis <-
+  readRDS(glue("{path}/rc_df_analysis.RDS"))
+
+# load crosswalks with joined districts
+crosswalk <-
+  readRDS(glue("{path}/election-data/clean_crosswalk.RDS"))
+
+# load clean restaurant data with "closed" restaurants for robustness checks
+openrice_robustness_check <-
+  readRDS(glue("{path}/restaurant-data/openrice_robustness_check.RDS"))
+
+# load analysis data frame for robustness check 3a: uncontested districts (all joined districts dropped)
+rc3a_df_analysis <-
+  readRDS(glue("{path}/df_rc3a_analysis.RDS"))
+
+# load 
+rc3b_df_analysis <-
+  readRDS(glue("{path}/df_rc3b_analysis.RDS")) 
+```
+
+# MAIN ANALYSIS-----------------------------------------------------------------
+# DiD models with two-way fixed effects
+
+```{r}
+# outcome: vote shares for pro-demo, continuous predictor
+vote_shares_mod1 <-
+  felm(prop_votes_demo ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = df_analysis)
+
+# outcome: vote shares for pro-demo, binary predictor
+vote_shares_mod2 <-
+  felm(prop_votes_demo ~ majority_yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = df_analysis)
+```
+
+```{r}
+# outcome: vote shares for pro-Beijing, continuous predictor
+vote_shares_mod3 <-
+  felm(prop_votes_est ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = df_analysis)
+
+# outcome: vote shares for pro-Beijing, binary predictor
+vote_shares_mod4 <-
+  felm(prop_votes_est ~ majority_yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = df_analysis)
+```
+
+```{r}
+# outcome: turnouts, continuous predictor
+vote_shares_mod5 <-
+  felm(sum_joined_dist_total ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = df_analysis)
+
+# outcome: turnouts, binary predictor
+vote_shares_mod6 <-
+  felm(sum_joined_dist_total ~ majority_yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = df_analysis)
+```
+
+# produce latex table
+```{r}
+panels <-
+  list(vote_shares_mod1, vote_shares_mod2,
+       vote_shares_mod3, vote_shares_mod4,
+       vote_shares_mod5, vote_shares_mod6)
+
+# formatting functions  
+f1 <- function(x) format(round(x, 2), nsmall = 2)
+f2 <- function(x) format(round(x, 0), big.mark=",")
+
+out <- modelsummary(
+  panels, 
+  stars = c("*" = 0.1, "**" = 0.05, "***" = 0.01),
+  coef_map = c("(Intercept)" = "(Intercept)",
+               "prop_Yellow" = 'Proportion of "Yellow" restaurants',
+               "majority_yellow" = 'Majority of restaurants is "Yellow"'),
+  gof_map =
+    tribble(
+      ~raw, ~clean, ~fmt, ~omit,
+      "nobs", "No. of obs.", f2, F,
+      "r.squared", "$R^2$", f1, F),
+  output = "data.frame") %>% 
+  select(-c(part, statistic)) %>% 
+  clean_names() %>%
+  rows_insert(tibble(term = "Year FE", x1 = "Y", x2 = "Y", x3 = "Y",
+                     x4 = "Y", x5 = "Y", x6 = "Y")) %>%
+  rows_insert(tibble(term = "District FE", x1 = "Y", x2 = "Y", x3 = "Y",
+                     x4 = "Y", x5 = "Y", x6 = "Y"))
+  
+# latex output  
+out %>%
+  kable("latex", 
+        booktabs = T, 
+        escape = F,
+        align = c("l", rep("c", 6)),
+        col.names = linebreak(c("", "(1)", "(2)", "(3)", "(4)", "(5)", "(6)"), align = "c"),
+        linesep = "") %>% 
+  kable_styling(
+    font_size = 10,
+    latex_options = "hold_position") %>% 
+  add_header_above(header = c(" " = 1, "Vote shares: pro-democracy" = 2, "Vote shares: pro-Beijing" = 2, "Turnouts: total votes cast" = 2)) %>%    
+  footnote(general = c("*p<0.1; **p<0.05; ***p<0.01"),
+           footnote_as_chunk = TRUE, 
+           general_title = "",
+           escape = F)
+```
+
+
+
+
+# ROBUSTNESS CHECK 1: DIFFERENT NUMBERS OF JOINED DISTRICTS DROPPED-------------
+# 1: huge joined districts
+```{r}
+# number of districts joined: 2, 4, 5, 6
+x <- c(6, 12, 15, 18)
+
+# 2
+joined_districts_to_drop <-
+  crosswalk %>%
+  group_by(fake_unit_id) %>%
+  summarise(n_obs = n()) %>%
+  filter(n_obs >= x[1]) %>%
+  select(fake_unit_id)
+
+df_analysis_dropped <-
+  df_analysis %>%
+  filter(!(fake_unit_id %in% joined_districts_to_drop$fake_unit_id))
+
+mod_rc1_all_votes_demo <-
+  felm(prop_votes_demo ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = df_analysis_dropped)
+
+mod_rc1_all_votes_est <-
+  felm(prop_votes_est ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = df_analysis_dropped)
+
+mod_rc1_all_turnouts <-
+  felm(sum_joined_dist_total ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = df_analysis_dropped)
+
+# 4
+joined_districts_to_drop <-
+  crosswalk %>%
+  group_by(fake_unit_id) %>%
+  summarise(n_obs = n()) %>%
+  filter(n_obs >= x[2]) %>%
+  select(fake_unit_id)
+
+df_analysis_dropped <-
+  df_analysis %>%
+  filter(!(fake_unit_id %in% joined_districts_to_drop$fake_unit_id))
+
+mod_rc1_4_votes_demo <-
+  felm(prop_votes_demo ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = df_analysis_dropped)
+
+mod_rc1_4_votes_est <-
+  felm(prop_votes_est ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = df_analysis_dropped)
+
+mod_rc1_4_turnouts <-
+  felm(sum_joined_dist_total ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = df_analysis_dropped)
+
+# 5
+joined_districts_to_drop <-
+  crosswalk %>%
+  group_by(fake_unit_id) %>%
+  summarise(n_obs = n()) %>%
+  filter(n_obs >= x[3]) %>%
+  select(fake_unit_id)
+
+df_analysis_dropped <-
+  df_analysis %>%
+  filter(!(fake_unit_id %in% joined_districts_to_drop$fake_unit_id))
+
+mod_rc1_5_votes_demo <-
+  felm(prop_votes_demo ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = df_analysis_dropped)
+
+mod_rc1_5_votes_est <-
+  felm(prop_votes_est ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = df_analysis_dropped)
+
+mod_rc1_5_turnouts <-
+  felm(sum_joined_dist_total ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = df_analysis_dropped)
+
+# 6
+joined_districts_to_drop <-
+  crosswalk %>%
+  group_by(fake_unit_id) %>%
+  summarise(n_obs = n()) %>%
+  filter(n_obs >= x[4]) %>%
+  select(fake_unit_id)
+
+df_analysis_dropped <-
+  df_analysis %>%
+  filter(!(fake_unit_id %in% joined_districts_to_drop$fake_unit_id))
+
+mod_rc1_6_votes_demo <-
+  felm(prop_votes_demo ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = df_analysis_dropped)
+
+mod_rc1_6_votes_est <-
+  felm(prop_votes_est ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = df_analysis_dropped)
+
+mod_rc1_6_turnouts <-
+  felm(sum_joined_dist_total ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = df_analysis_dropped)
+```
+
+
+# print the table for robustness check 1
+
+```{r}
+rc1_panels <-
+  list(
+    "Panel A: All fake districts dropped" = list(
+      mod_rc1_all_votes_demo, mod_rc1_all_votes_est, mod_rc1_all_turnouts
+    ),
+    "Panel B: joined districts >= 4 dropped" = list(
+      mod_rc1_4_votes_demo, mod_rc1_4_votes_est, mod_rc1_4_turnouts
+    ),
+    "Panel C: joined districts >= 5 dropped" = list(
+      mod_rc1_5_votes_demo, mod_rc1_5_votes_est, mod_rc1_5_turnouts
+    ),
+    "Panel D: joined districts >= 6 dropped" = list(
+      mod_rc1_6_votes_demo, mod_rc1_6_votes_est, mod_rc1_6_turnouts
+    )
+  )
+
+out <- modelsummary(
+  rc1_panels, 
+  stars = c("*" = 0.1, "**" = 0.05, "***" = 0.01),
+  coef_map = c("(Intercept)" = "(Intercept)",
+               "prop_Yellow" = 'Proportion of "Yellow" restaurants'),
+  shape = "rbind",
+  gof_map =
+    tribble(
+      ~raw, ~clean, ~fmt, ~omit,
+      "nobs", "No. of obs.", f2, F,
+      "r.squared", "$R^2$", f1, F),
+  output = "data.frame") %>% 
+  clean_names() %>%
+  rows_insert(tibble(x = "Year FE", x1 = "Y", x2 = "Y", x3 = "Y")) %>%
+  rows_insert(tibble(x = "District FE", x1 = "Y", x2 = "Y", x3 = "Y"))
+
+# latex output  
+out %>%
+  kable("latex", 
+        booktabs = TRUE, 
+        escape = FALSE,
+        align = c("l", rep("c", 3)),
+        col.names = linebreak(c("", "(1)", "(2)", "(3)"), align = "c"),
+        linesep = "") %>% 
+  kable_styling(
+    font_size = 11,
+    latex_options = "hold_position") %>% 
+  add_header_above(header = c(" " = 1, "Vote shares: pro-democracy" = 2, "Vote shares: pro-Beijing" = 2, "Turnouts: total votes cast" = 2)) %>%     
+  footnote(general = c("*p<0.1; **p<0.05; ***p<0.01"),
+           footnote_as_chunk = TRUE, 
+           general_title = "",
+           escape = FALSE)
+```
+
+
+
+
+# ROBUSTNESS CHECK 2: CLOSED RESTAURANTS ADDED----------------------------------
+# DiD models with two-way fixed effects
+
+
+# table: summary stats
+```{r}
+openrice_closed <-
+  openrice_robustness_check %>%
+  filter(store_status == 0)
+
+prop.table(table(openrice_closed$ideo_text))
+```
+
+
+```{r}
+# outcome: vote shares for pro-demo, continuous predictor
+vote_shares_mod1 <-
+  felm(prop_votes_demo ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = rc_df_analysis)
+
+# outcome: vote shares for pro-demo, binary predictor
+vote_shares_mod2 <-
+  felm(prop_votes_demo ~ majority_yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = rc_df_analysis)
+```
+
+```{r}
+# outcome: vote shares for pro-Beijing, continuous predictor
+vote_shares_mod3 <-
+  felm(prop_votes_est ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = rc_df_analysis)
+
+# outcome: vote shares for pro-Beijing, binary predictor
+vote_shares_mod4 <-
+  felm(prop_votes_est ~ majority_yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = rc_df_analysis)
+```
+
+```{r}
+# outcome: turnouts, continuous predictor
+vote_shares_mod5 <-
+  felm(sum_joined_dist_total ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = rc_df_analysis)
+
+# outcome: turnouts, binary predictor
+vote_shares_mod6 <-
+  felm(sum_joined_dist_total ~ majority_yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = rc_df_analysis)
+```
+
+# produce latex table
+```{r}
+panels <-
+  list(vote_shares_mod1, vote_shares_mod2,
+       vote_shares_mod3, vote_shares_mod4,
+       vote_shares_mod5, vote_shares_mod6)
+
+# formatting functions  
+f1 <- function(x) format(round(x, 2), nsmall = 2)
+f2 <- function(x) format(round(x, 0), big.mark = ",")
+
+out <- modelsummary(
+  panels, 
+  stars = c("*" = 0.1, "**" = 0.05, "***" = 0.01),
+  coef_map = c("(Intercept)" = "(Intercept)",
+               "prop_Yellow" = 'Proportion of "Yellow" restaurants',
+               "majority_yellow" = 'Majority of restaurants is "Yellow"'),
+  gof_map =
+    tribble(
+      ~raw, ~clean, ~fmt, ~omit,
+      "nobs", "No. of obs.", f2, F,
+      "r.squared", "$R^2$", f1, F),
+  output = "data.frame") %>% 
+  select(-c(part, statistic)) %>% 
+  clean_names() %>%
+  rows_insert(tibble(term = "Year FE", x1 = "Y", x2 = "Y", x3 = "Y",
+                     x4 = "Y", x5 = "Y", x6 = "Y")) %>%
+  rows_insert(tibble(term = "District FE", x1 = "Y", x2 = "Y", x3 = "Y",
+                     x4 = "Y", x5 = "Y", x6 = "Y"))
+  
+# latex output  
+out %>%
+  kable("latex", 
+        booktabs = T, 
+        escape = F,
+        align = c("l", rep("c", 6)),
+        col.names = linebreak(c("", "(1)", "(2)", "(3)", "(4)", "(5)", "(6)"), align = "c"),
+        linesep = "") %>% 
+  kable_styling(
+    font_size = 10,
+    latex_options = "hold_position") %>% 
+  add_header_above(header = c(" " = 1, "Vote shares: pro-democracy" = 2, "Vote shares: pro-Beijing" = 2, "Turnouts: total votes cast" = 2)) %>%    
+  footnote(general = c("*p<0.1; **p<0.05; ***p<0.01"),
+           footnote_as_chunk = TRUE, 
+           general_title = "",
+           escape = F)
+```
+
+
+
+
+# ROBUSTNESS CHECK 3: UNCONTESTED DISTRICTS ADDED-------------------------------
+
+```{r}
+# panels: all joined districts dropped
+mod_rc3a_1 <-
+  felm(prop_votes_demo ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = rc3a_df_analysis)
+
+mod_rc3a_2 <-
+  felm(prop_votes_est ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = rc3a_df_analysis)
+
+
+# panels: interpolated votes for those joined districts
+mod_rc3b_3 <-
+  felm(prop_votes_demo ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = rc3b_df_analysis)
+
+mod_rc3b_4 <-
+  felm(prop_votes_est ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = rc3b_df_analysis)
+
+```
+
+# latex outputs:
+
+```{r}
+# formatting functions  
+f1 <- function(x) format(round(x, 2), nsmall = 2)
+f2 <- function(x) format(round(x, 0), big.mark = ",")
+
+
+rc3_panels <- 
+  list(
+    "Panel A: All joined districts dropped" = list(
+      mod_rc3a_1, mod_rc3a_2
+    ),
+    "Panel B: Votes for joined districts interpolated" = list(
+      mod_rc3b_3, mod_rc3b_4
+    )
+  )
+
+out <- modelsummary(
+  rc3_panels, 
+  stars = c("*" = 0.1, "**" = 0.05, "***" = 0.01),
+  coef_map = c("(Intercept)" = "(Intercept)",
+               "prop_Yellow" = 'Proportion of "Yellow" restaurants'),
+  shape = "rbind",
+  gof_map =
+    tribble(
+      ~raw, ~clean, ~fmt, ~omit,
+      "nobs", "No. of obs.", f2, F,
+      "r.squared", "$R^2$", f1, F),
+  output = "data.frame") %>% 
+  clean_names() %>%
+  rows_insert(tibble(x = "Year FE", x1 = "Y", x2 = "Y")) %>%
+  rows_insert(tibble(x = "District FE", x1 = "Y", x2 = "Y"))
+
+# latex output  
+out %>%
+  kable("latex", 
+        booktabs = T, 
+        escape = F,
+        align = c("l", rep("c", 2)),
+        col.names = linebreak(c("", "(1)", "(2)"), align = "c"),
+        linesep = "") %>% 
+  kable_styling(
+    font_size = 12,
+    latex_options = "hold_position") %>% 
+  add_header_above(header = c(" " = 1, "Vote shares for pro-democracy candidates" = 1, "Vote shares for pro-Beijing candidates" = 1)) %>%    
+  footnote(general = c("*p<0.1; **p<0.05; ***p<0.01"),
+           footnote_as_chunk = TRUE, 
+           general_title = "",
+           escape = F)
+```
+
+
+
+
+
+
+
+
