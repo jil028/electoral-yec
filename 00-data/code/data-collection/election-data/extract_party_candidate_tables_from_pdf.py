@@ -1,5 +1,4 @@
 # import libraries
-import tabula
 from tabula import read_pdf
 from tabula import convert_into
 
