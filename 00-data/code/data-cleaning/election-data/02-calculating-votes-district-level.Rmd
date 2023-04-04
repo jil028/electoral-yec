@@ -291,7 +291,7 @@ stacked_votes_disco <-
 # save
 
 ```{r}
-write_rds(stacked_votes_disco, "/Users/jiayili/Desktop/honors-thesis-main/00-data/cleaned-data/election-data/stacked_disco_votes_district.RDS")
+write_rds(stacked_votes_disco, "~/Desktop/honors-thesis-main/00-data/cleaned-data/election-data/stacked_disco_votes_district.RDS")
 ```
 
 
