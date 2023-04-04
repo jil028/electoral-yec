@@ -12,11 +12,7 @@ To-Do:
   -- Add a chain store column
   -- Add a store status column by parsing the restaurant name (indicated in this variable)
   -- Add a constituency variable in English (using `district`)
-
-```{r setup, include=FALSE}
-rm(list = ls())
-knitr::opts_chunk$set(echo = TRUE)
-```
+  
 
 # load packages and  raw data
 ```{r}
