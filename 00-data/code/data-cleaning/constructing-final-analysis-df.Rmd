@@ -553,43 +553,6 @@ interpolated <-
   left_join(geometry_interpolated, by = c("fake_unit_id", "year", "CACODE"))
 ```
 
-
-
-```{r}
-# # clean
-# interpolated_joined_crosswalk_uncontested <-
-#   interpolated %>%
-#   #left_join(clean_uncontested, by = c("fake_unit_id", "year", "CACODE")) %>%
-#   mutate(
-#     votes_pro_demo =
-#       case_when(
-#         str_detect(fake_unit_id, "^ORIG") & uncontested_candidate_ideo == "pro-democracy" ~ 1,
-#         TRUE ~ as.numeric(votes_pro_demo)
-#       ),
-# 
-#     votes_pro_est =
-#       case_when(
-#         str_detect(fake_unit_id, "^ORIG") & uncontested_candidate_ideo == "pro-establishment" ~ 1,
-#         TRUE ~ as.numeric(votes_pro_est)
-#       ),
-# 
-#     votes_independent =
-#       case_when(
-#         str_detect(fake_unit_id, "^ORIG") & uncontested_candidate_ideo == "independent" ~ 1,
-#         TRUE ~ as.numeric(votes_independent)
-#       )
-#    ) %>%
-#    # mutate(
-#    #   votes_pro_demo = round(votes_pro_demo),
-#    #   votes_pro_est = round(votes_pro_est),
-#    #   votes_independent = round(votes_independent)
-#    # ) %>%
-#    mutate(total = rowSums(select(., votes_pro_demo, votes_pro_est, votes_independent), na.rm = TRUE))
-```
-
-
-
-
 ```{r}
 interpolated_joined_districts_shares <-
   interpolated %>%
