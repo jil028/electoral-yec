@@ -1,0 +1,432 @@
+district_code,district_name,pop_estimate_2015,year
+A01,Chung Wan,"13,850 ",2015
+A02,Mid Levels    East,"18,828 ",2015
+A03,Castle Road,"18,859 ",2015
+A04,Peak,"20,324 ",2015
+A05,University,"19,010 ",2015
+A06,Kennedy Town    & Mount Davis,"16,920 ",2015
+A07,Kwun Lung,"15,188 ",2015
+A08,Sai Wan,"14,789 ",2015
+A09,Belcher,"21,195 ",2015
+A10,Shek Tong Tsui,"17,176 ",2015
+A11,Sai Ying Pun,"14,528 ",2015
+A12,Sheung Wan,"17,550 ",2015
+A13,Tung Wah,"13,051 ",2015
+A14,Centre Street,"16,227 ",2015
+A15,Water Street,"15,142 ",2015
+B01,Hennessy,"13,207 ",2015
+B02,Oi Kwan ,"14,442 ",2015
+B03,Canal Road,"13,514 ",2015
+B04,Victoria Park,"14,642 ",2015
+B05,Tin Hau,"14,156 ",2015
+B06,Causeway Bay,"13,655 ",2015
+B07,Tai Hang,"13,637 ",2015
+B08,Jardine's    Lookout,"15,200 ",2015
+B09,Broadwood,"14,677 ",2015
+B10,Happy Valley,"14,090 ",2015
+B11,Stubbs Road,"14,203 ",2015
+B12,Southorn,"14,597 ",2015
+B13,Tai Fat Hau,"13,346 ",2015
+C01,Tai Koo    Shing West,"18,269 ",2015
+C02,Tai Koo Shing    East,"19,530 ",2015
+C03,Lei King Wan,"20,803 ",2015
+C04,Aldrich Bay,"19,119 ",2015
+C05,Shaukeiwan,"13,250 ",2015
+C06,A Kung Ngam,"19,188 ",2015
+C07,Heng Fa Chuen,"19,267 ",2015
+C08,Tsui Wan,"13,031 ",2015
+C09,Yan Lam,"16,981 ",2015
+C10,Siu Sai Wan,"13,176 ",2015
+C11,King Yee,"15,934 ",2015
+C12,Wan Tsui,"14,542 ",2015
+C13,Fei Tsui,"15,427 ",2015
+C14,Mount Parker,"14,048 ",2015
+C15,Braemar Hill,"16,991 ",2015
+C16,Fortress Hill,"15,917 ",2015
+C17,City Garden,"15,679 ",2015
+C18,Provident,"21,058 ",2015
+C19,Fort Street,"15,583 ",2015
+C20,Kam Ping,"16,793 ",2015
+C21,Tanner,"15,345 ",2015
+C22,Healthy    Village,"14,480 ",2015
+C23,Quarry Bay,"13,764 ",2015
+C24,Nam Fung,"14,081 ",2015
+C25,Kornhill,"14,724 ",2015
+C26,Kornhill    Garden,"14,958 ",2015
+C27,Hing Tung,"18,899 ",2015
+C28,Sai Wan Ho,"19,482 ",2015
+C29,Lower Yiu    Tung,"16,389 ",2015
+C30,Upper Yiu    Tung,"12,732 ",2015
+C31,Hing Man,"14,432 ",2015
+C32,Lok Hong,"12,391 ",2015
+C33,Tsui Tak,"13,349 ",2015
+C34,Yue Wan,"14,804 ",2015
+C35,Kai Hiu,"13,343 ",2015
+D01,Aberdeen,"19,698 ",2015
+D02,Ap Lei Chau    Estate,"12,478 ",2015
+D03,Ap Lei Chau    North,"13,025 ",2015
+D04,Lei Tung I,"16,828 ",2015
+D05,Lei Tung II,"13,307 ",2015
+D06,South    Horizons East,"15,340 ",2015
+D07,South    Horizons West,"16,036 ",2015
+D08,Wah Kwai,"14,737 ",2015
+D09,Wah Fu South,"12,429 ",2015
+D10,Wah Fu North,"14,296 ",2015
+D11,Pokfulam,"19,996 ",2015
+D12,Chi Fu,"16,062 ",2015
+D13,Tin Wan,"16,716 ",2015
+D14,Shek Yue,"18,474 ",2015
+D15,Wong Chuk    Hang,"17,251 ",2015
+D16,Bays Area,"18,417 ",2015
+D17,Stanley &    Shek O,"22,008 ",2015
+E01, Tsim Sha Tsui West  ,"20,881 ",2015
+E02, Jordan South,"18,327 ",2015
+E03, Jordan West,"14,818 ",2015
+E04, Yau Ma Tei South ,"19,918 ",2015
+E05, Charming ,"17,628 ",2015
+E06, Mong Kok West,"15,423 ",2015
+E07, Fu Pak,"18,820 ",2015
+E08, Olympic,"18,162 ",2015
+E09, Cherry,"15,676 ",2015
+E10, Tai Kok Tsui South ,"16,214 ",2015
+E11, Tai Kok Tsui North ,"18,474 ",2015
+E12, Tai Nan,"20,432 ",2015
+E13, Mong Kok North ,"17,859 ",2015
+E14, Mong Kok East,"15,742 ",2015
+E15, Mong Kok South ,"16,293 ",2015
+E16, Yau Ma Tei North ,"12,817 ",2015
+E17, East Tsim Sha Tsui &    King's Park,"15,185 ",2015
+E18, Tsim Sha Tsui    Central ,"16,871 ",2015
+E19, Jordan North,"13,558 ",2015
+F01, Po Lai,"19,254 ",2015
+F02, Cheung Sha Wan,"16,864 ",2015
+F03, Nam Cheong North,"19,807 ",2015
+F04, Shek Kip Mei ,"20,852 ",2015
+F05, Nam Cheong East,"18,487 ",2015
+F06, Nam Cheong South,"20,737 ",2015
+F07, Nam Cheong Central,"18,413 ",2015
+F08, Nam Cheong West,"20,523 ",2015
+F09, Fu Cheong,"20,270 ",2015
+F10, Lai Kok,"14,379 ",2015
+F11, Fortune,"15,401 ",2015
+F12, Lai Chi Kok South,"17,514 ",2015
+F13, Mei Foo South,"17,304 ",2015
+F14, Mei Foo Central,"14,675 ",2015
+F15, Mei Foo North,"16,929 ",2015
+F16, Lai Chi Kok Central,"19,882 ",2015
+F17, Lai Chi Kok North,"14,042 ",2015
+F18, Un Chau & So Uk,"18,626 ",2015
+F19, Lei Cheng Uk,"13,110 ",2015
+F20, Ha Pak Tin,"14,701 ",2015
+F21, Yau Yat Tsuen,"16,484 ",2015
+F22," Nam Shan, Tai Hang Tung    & Tai Hang Sai","16,244 ",2015
+F23, Lung Ping & Sheung    Pak Tin,"16,794 ",2015
+G01, Ma Tau Wai,"19,205",2015
+G02, Ma Hang Chung,"20,012",2015
+G03, Ma Tau Kok,"14,990",2015
+G04, Lok Man,"16,110",2015
+G05, Sheung Lok,"16,095",2015
+G06, Ho Man Tin,"20,651",2015
+G07, Kadoorie,"18,756",2015
+G08, Prince,"16,841",2015
+G09, Kowloon Tong,"19,293",2015
+G10, Lung Shing,"15,460",2015
+G11, Sung Wong Toi,"20,487",2015
+G12, Kai Tak North,"16,562",2015
+G13, Kai Tak South,"14,599",2015
+G14, Hoi Sham,"15,823",2015
+G15, To Kwa Wan North,"13,368",2015
+G16, To Kwa Wan South,"15,454",2015
+G17, Hok Yuen Laguna Verde,"18,930",2015
+G18, Whampoa East,"18,187",2015
+G19, Whampoa West,"20,624",2015
+G20, Hung Hom Bay,"19,607",2015
+G21, Hung    Hom,"14,578",2015
+G22, Ka Wai,"19,301",2015
+G23, Oi Man,"14,736",2015
+G24, Oi Chun,"13,524",2015
+H01, Lung Tsui  ,"15,872 ",2015
+H02, Lung Ha,"12,901 ",2015
+H03, Lung Sheung,"20,477 ",2015
+H04, Fung Wong,"16,200 ",2015
+H05, Fung Tak,"16,240 ",2015
+H06, Lung Sing,"20,111 ",2015
+H07, San Po Kong,"21,677 ",2015
+H08, Tung Tau,"19,630 ",2015
+H09, Tung Mei,"17,580 ",2015
+H10, Lok Fu,"14,977 ",2015
+H11, Wang Tau Hom,"17,303 ",2015
+H12, Tin Keung,"14,528 ",2015
+H13, Tsui Chuk & Pang Ching,"18,266 ",2015
+H14, Chuk Yuen South,"15,103 ",2015
+H15, Chuk Yuen North,"16,098 ",2015
+H16, Tsz Wan West,"19,020 ",2015
+H17, Ching Oi,"20,150 ",2015
+H18, Ching On,"20,235 ",2015
+H19, Tsz Wan East,"20,122 ",2015
+H20, King Fu,"19,385 ",2015
+H21, Choi Wan East,"13,945 ",2015
+H22, Choi Wan South,"12,773 ",2015
+H23, Choi Wan West,"13,487 ",2015
+H24, Chi Choi,"16,110 ",2015
+H25, Choi Hung,"14,702 ",2015
+J01, Kwun Tong Central,"16,076 ",2015
+J02, Kowloon Bay,"13,952 ",2015
+J03, Kai Yip,"16,399 ",2015
+J04, Lai Ching,"15,770 ",2015
+J05, Ping Shek,"13,362 ",2015
+J06, Sheung Choi,"19,162 ",2015
+J07, Jordan Valley,"19,358 ",2015
+J08, Shun Tin,"18,918 ",2015
+J09, Sheung Shun,"17,661 ",2015
+J10, On Lee,"13,453 ",2015
+J11, Po Tat,"19,866 ",2015
+J12, Sau Mau Ping North,"20,579 ",2015
+J13, Hiu Lai,"18,457 ",2015
+J14, Sau Mau Ping South,"13,909 ",2015
+J15, Sau Mau Ping Central,"15,256 ",2015
+J16, Hing Tin,"17,218 ",2015
+J17, Lam Tin,"20,947 ",2015
+J18, Kwong Tak,"19,310 ",2015
+J19, Ping Tin,"18,151 ",2015
+J20, Pak Nga,"13,410 ",2015
+J21, Yau Tong East,"19,652 ",2015
+J22, Yau Lai,"18,285 ",2015
+J23, Chui Cheung,"20,726 ",2015
+J24, Yau Tong West,"20,481 ",2015
+J25, Laguna City,"24,598 ",2015
+J26, King Tin,"20,623 ",2015
+J27, Tsui Ping,"19,113 ",2015
+J28, Po Lok,"14,443 ",2015
+J29, Yuet Wah,"13,845 ",2015
+J30, Hip Hong,"16,713 ",2015
+J31, Hong Lok,"16,707 ",2015
+J32, Ting On,"16,465 ",2015
+J33, Upper Ngau Tau Kok Estate,"15,969 ",2015
+J34, Lower Ngau Tau Kok Estate,"17,736 ",2015
+J35, To Tai,"17,013 ",2015
+J36, Lok Wah North,"13,325 ",2015
+J37, Lok Wah South,"13,093 ",2015
+K01, Tak Wah,"21,075",2015
+K02, Yeung Uk Road,"19,935",2015
+K03, Hoi Bun,"19,641",2015
+K04, Clague Garden,"14,549",2015
+K05, Fuk Loi,"13,898",2015
+K06, Discovery Park,"17,420",2015
+K07, Tsuen Wan Centre,"16,595",2015
+K08, Allway,"19,833",2015
+K09, Lai To,"19,431",2015
+K10, Ting Sham,"18,540",2015
+K11, Tsuen Wan West,"18,672",2015
+K12, Tsuen Wan Rural,"18,896",2015
+K13, Ma Wan,"15,126",2015
+K14, Luk Yeung,"15,335",2015
+K15, Lei Muk Shue East,"19,502",2015
+K16, Lei Muk Shue West,"15,745",2015
+K17, Shek Wai Kok,"12,723",2015
+K18, Cheung Shek,"12,962",2015
+L01, Tuen Mun Town Centre,"19,539 ",2015
+L02, Siu Chi,"21,052 ",2015
+L03, Siu Tsui,"19,796 ",2015
+L04, On Ting,"16,704 ",2015
+L05, Yau Oi South,"15,172 ",2015
+L06, Yau Oi North,"15,090 ",2015
+L07, Tsui Hing,"18,323 ",2015
+L08, Shan King,"17,898 ",2015
+L09, King Hing,"15,315 ",2015
+L10, Hing Tsak,"16,134 ",2015
+L11, San Hui,"18,899 ",2015
+L12, Sam Shing,"21,287 ",2015
+L13, Hanford,"20,700 ",2015
+L14, Fu Sun,"19,390 ",2015
+L15, Yuet Wu,"13,324 ",2015
+L16, Siu Hei,"13,096 ",2015
+L17, Wu King,"13,747 ",2015
+L18, Butterfly,"17,013 ",2015
+L19, Lok Tsui,"14,544 ",2015
+L20, Lung Mun,"17,252 ",2015
+L21, San King,"14,585 ",2015
+L22, Leung King,"14,416 ",2015
+L23, Tin King,"16,443 ",2015
+L24, Po Tin,"19,100 ",2015
+L25, Kin Sang,"16,393 ",2015
+L26, Siu Hong,"14,963 ",2015
+L27, Prime View,"19,254 ",2015
+L28, Fu Tai,"20,436 ",2015
+L29, Tuen Mun Rural,"21,714 ",2015
+M01, Fung Nin,"19,454 ",2015
+M02, Shui Pin,"19,277 ",2015
+M03, Nam Ping,"16,800 ",2015
+M04, Pek Long,"17,016 ",2015
+M05, Yuen Long Centre,"17,543 ",2015
+M06, Yuen Lung,"13,959 ",2015
+M07, Fung Cheung,"15,611 ",2015
+M08, Shap Pat Heung East,"15,217 ",2015
+M09, Shap Pat Heung Central,"20,104 ",2015
+M10, Shap Pat Heung West,"21,626 ",2015
+M11, Ping Shan South,"16,337 ",2015
+M12, Ping Shan Central,"14,201 ",2015
+M13, Ping Shan North,"12,799 ",2015
+M14, Ha Tsuen,"15,364 ",2015
+M15, Tin Shing,"21,328 ",2015
+M16, Shui Oi,"18,325 ",2015
+M17, Shui Wah,"15,299 ",2015
+M18, Chung Wah,"15,311 ",2015
+M19, Yuet Yan,"19,339 ",2015
+M20, Fu Yan,"19,773 ",2015
+M21, Yat Chak,"19,122 ",2015
+M22, Tin Heng,"22,520 ",2015
+M23, Wang Yat,"20,242 ",2015
+M24, Ching King,"19,925 ",2015
+M25, Kingswood North,"23,223 ",2015
+M26, Tsz Yau,"14,265 ",2015
+M27, Yiu Yau,"14,029 ",2015
+M28, Tin Yiu,"14,424 ",2015
+M29, Kingswood South,"17,332 ",2015
+M30, Chung Pak,"15,681 ",2015
+M31, Fairview Park,"16,460 ",2015
+M32, San Tin,"20,990 ",2015
+M33, Kam Tin,"13,462 ",2015
+M34, Pat Heung North,"13,208 ",2015
+M35, Pat Heung South,"19,645 ",2015
+N01, Luen Wo Hui ,"19,439",2015
+N02, Fanling Town ,"13,501",2015
+N03, Cheung Wah ,"17,874",2015
+N04, Wah Do ,"19,452",2015
+N05, Wah Ming ,"17,151",2015
+N06, Yan Shing ,"20,102",2015
+N07, Shing Fuk ,"14,982",2015
+N08, Fanling South ,"15,365",2015
+N09, Ching Ho ,"20,610",2015
+N10, Yu Tai ,"17,154",2015
+N11, Sheung Shui Rural,"21,578",2015
+N12, Choi Yuen,"17,909",2015
+N13, Shek Wu Hui,"19,736",2015
+N14, Tin Ping West ,"15,062",2015
+N15, Fung Tsui ,"14,972",2015
+N16, Sha Ta ,"14,263",2015
+N17, Tin Ping East ,"17,298",2015
+N18, Queen's Hill ,"17,962",2015
+P01, Tai Po Hui ,"16,037 ",2015
+P02, Tai Po Central ,"14,109 ",2015
+P03, Chung Ting ,"14,946 ",2015
+P04, Tai Yuen ,"14,379 ",2015
+P05, Fu Heng ,"16,576 ",2015
+P06, Yee Fu ,"16,606 ",2015
+P07, Fu Ming Sun ,"14,282 ",2015
+P08, Kwong Fuk & Plover    Cove ,"13,459 ",2015
+P09, Wang Fuk,"12,744 ",2015
+P10, Tai Po Kau ,"19,556 ",2015
+P11, Wan Tau Tong ,"17,024 ",2015
+P12, San Fu,"16,714 ",2015
+P13, Lam Tsuen Valley,"21,098 ",2015
+P14, Po Nga ,"14,902 ",2015
+P15, Tai Wo ,"15,623 ",2015
+P16, Old Market &    Serenity ,"15,455 ",2015
+P17, Hong Lok Yuen ,"20,783 ",2015
+P18, Shuen Wan,"20,509 ",2015
+P19, Sai Kung North ,"15,475 ",2015
+Q01, Sai Kung Central,"11,755 ",2015
+Q02, Pak Sha Wan,"18,728 ",2015
+Q03, Sai Kung Islands,"13,103 ",2015
+Q04, Hang Hau East,"15,821 ",2015
+Q05, Hang Hau West,"15,591 ",2015
+Q06, Po Yee,"16,781 ",2015
+Q07, Wai King,"15,002 ",2015
+Q08, Do Shin,"15,314 ",2015
+Q09, Kin Ming,"16,592 ",2015
+Q10, Choi Kin,"19,908 ",2015
+Q11, O Tong,"18,262 ",2015
+Q12, Fu Kwan,"19,951 ",2015
+Q13, Kwan Po,"13,726 ",2015
+Q14, Nam On,"17,506 ",2015
+Q15, Hong King,"20,623 ",2015
+Q16, Tsui Lam,"16,311 ",2015
+Q17, Po Lam,"16,722 ",2015
+Q18, Yan Ying,"19,431 ",2015
+Q19, Wan Hang,"21,169 ",2015
+Q20, King Lam,"17,890 ",2015
+Q21, Hau Tak,"18,253 ",2015
+Q22, Fu Nam,"17,572 ",2015
+Q23, Tak Ming,"19,323 ",2015
+Q24, Sheung Tak,"18,356 ",2015
+Q25, Kwong Ming,"18,555 ",2015
+Q26, Wan Po North,"16,675 ",2015
+Q27, Wan Po South,"16,570 ",2015
+R01, Sha Tin Town Centre ,"19,821",2015
+R02, Lek Yuen ,"16,442",2015
+R03, Wo Che Estate ,"18,329",2015
+R04, City One ,"15,824",2015
+R05, Yue Shing ,"15,363",2015
+R06, Wong Uk,"17,586",2015
+R07, Sha Kok,"16,543",2015
+R08, Pok Hong,"16,341",2015
+R09, Jat Min,"20,609",2015
+R10, Chun Fung ,"15,274",2015
+R11, Sun Tin Wai,"17,028",2015
+R12, Chui Tin,"15,432",2015
+R13, Hin Ka,"13,242",2015
+R14, Lower Shing Mun,"18,693",2015
+R15, Wan Shing ,"20,693",2015
+R16, Keng Hau,"20,452",2015
+R17, Tin Sum,"14,986",2015
+R18, Chui Ka,"16,045",2015
+R19, Tai Wai,"20,765",2015
+R20, Chung Tin,"15,032",2015
+R21, Sui Wo,"13,191",2015
+R22, Fo Tan,"16,960",2015
+R23, Chun Ma,"14,491",2015
+R24, Chung On,"20,910",2015
+R25, Kam To,"20,813",2015
+R26, Ma On Shan Town Centre,"18,206",2015
+R27, Lee On,"16,354",2015
+R28, Fu Lung,"16,979",2015
+R29, Wu Kai Sha ,"16,346",2015
+R30, Kam Ying,"17,726",2015
+R31, Yiu On,"19,370",2015
+R32, Heng On,"21,864",2015
+R33, On Tai,"21,661",2015
+R34, Tai Shui Hang ,"17,868",2015
+R35, Yu Yan,"18,197",2015
+R36, Bik Woo,"16,660",2015
+R37, Kwong Hong,"18,016",2015
+R38, Kwong Yuen,"13,883",2015
+S01, Kwai Hing,"17,975 ",2015
+S02, Kwai Shing East Estate,"18,253 ",2015
+S03, Upper Tai Wo Hau,"12,957 ",2015
+S04, Lower Tai Wo Hau,"13,301 ",2015
+S05, Kwai Chung Estate North,"19,197 ",2015
+S06, Kwai Chung Estate South,"20,793 ",2015
+S07, Shek Yam,"21,347 ",2015
+S08, On Yam,"16,044 ",2015
+S09, Shek Lei South,"19,630 ",2015
+S10, Shek Lei North,"21,330 ",2015
+S11, Tai Pak Tin,"21,829 ",2015
+S12, Kwai Fong,"17,652 ",2015
+S13, Wah Lai,"16,655 ",2015
+S14, Lai Wah,"14,771 ",2015
+S15, Cho Yiu,"15,988 ",2015
+S16, Hing Fong,"20,293 ",2015
+S17, Lai King,"14,095 ",2015
+S18, Kwai Shing West Estate,"18,254 ",2015
+S19, On Ho,"20,850 ",2015
+S20, Wai Ying,"19,576 ",2015
+S21, Tsing Yi Estate,"17,201 ",2015
+S22, Greenfield,"19,924 ",2015
+S23, Cheung Ching,"18,733 ",2015
+S24, Cheung Hong,"15,560 ",2015
+S25, Shing Hong,"15,138 ",2015
+S26, Tsing Yi South,"19,744 ",2015
+S27, Cheung Hang,"13,616 ",2015
+S28, Ching Fat,"18,267 ",2015
+S29, Cheung On,"13,832 ",2015
+T01, Lantau,"19,207 ",2015
+T02, Yat Tung Estate North,"18,959 ",2015
+T03, Yat Tung Estate South,"20,124 ",2015
+T04, Tung Chung North,"22,450 ",2015
+T05, Tung Chung South,"18,489 ",2015
+T06, Discovery Bay,"13,390 ",2015
+T07, Peng Chau & Hei Ling Chau,"7,376 ",2015
+T08, Lamma & Po Toi,"6,183 ",2015
+T09, Cheung Chau South,"11,108 ",2015
+T10, Cheung Chau North,"11,082 ",2015
