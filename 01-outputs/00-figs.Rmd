@@ -2,7 +2,7 @@
 title: "Visualization: Figures"
 output: html_document
 ---
-Purpose: to clean data and create figures in the background and results sections of the thesis.
+Purpose: to clean data and create figures in the thesis.
 
 # load packages
 
