@@ -13,7 +13,7 @@ source("helper-packages.R")
 shp_2011_raw <-
   read_sf("~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2011_district_council_election/DCCA2011_SHP/DCCA2011.shp")
 
-## note that this shape doesn't have a default crs
+## note that this shapefile doesn't have a default crs
 # set the raw file to its raw crs (2326)
 shp_2011_raw <- st_set_crs(shp_2011_raw, 2326)
 
