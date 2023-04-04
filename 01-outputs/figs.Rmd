@@ -24,7 +24,7 @@ library(patchwork)
 library(showtext)
 
 # set source directory
-source_dir <- "/Users/jiayili/Desktop/honors-thesis-main/01-outputs/raw-data"
+source_dir <- "enter source directory"
 ```
 
 
