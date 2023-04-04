@@ -13,10 +13,6 @@ To-Do:
  -- Check for bad coordinates 
  -- Reorder columns 
  
-```{r setup, include=FALSE}
-rm(list = ls())
-knitr::opts_chunk$set(echo = TRUE)
-```
 
 # load packages and data
 
