@@ -1,6 +1,5 @@
 # load data
 library(rio)
-library(labelled)
 
 # glue strings
 library(glue)
