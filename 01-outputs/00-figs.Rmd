@@ -378,7 +378,7 @@ timeline_2019_final <-
 ##############
 
 protests <-
-  read_sf("/Users/jiayili/Desktop/honors-thesis-main/01-outputs/raw-data/event_v2/event.shp")
+  read_sf(glue("{source_dir}/event_v2/event.shp"))
 
 cleaned_protests <-
   protests %>%
