@@ -35,6 +35,7 @@ rc3b_df_analysis <-
   readRDS(glue("{path}/df_rc3b_analysis.RDS")) 
 ```
 
+
 # MAIN ANALYSIS-----------------------------------------------------------------
 # DiD models with two-way fixed effects
 
@@ -83,14 +84,13 @@ panels <-
 
 # formatting functions  
 f1 <- function(x) format(round(x, 2), nsmall = 2)
-f2 <- function(x) format(round(x, 0), big.mark=",")
+f2 <- function(x) format(round(x, 0), big.mark = ",")
 
 out <- modelsummary(
   panels, 
   stars = c("*" = 0.1, "**" = 0.05, "***" = 0.01),
-  coef_map = c("(Intercept)" = "(Intercept)",
-               "prop_Yellow" = 'Proportion of "Yellow" restaurants',
-               "majority_yellow" = 'Majority of restaurants is "Yellow"'),
+  coef_map = c("prop_Yellow" = 'Proportion of "Yellow" restaurants',
+               "majority_yellow" = 'Majority of restaurants are "Yellow"'),
   gof_map =
     tribble(
       ~raw, ~clean, ~fmt, ~omit,
@@ -119,19 +119,18 @@ out %>%
   footnote(general = c("*p<0.1; **p<0.05; ***p<0.01"),
            footnote_as_chunk = TRUE, 
            general_title = "",
-           escape = FALSE)
+           escape = TRUE)
 ```
 
 
 
-
-# ROBUSTNESS CHECK 1: DIFFERENT NUMBERS OF JOINED DISTRICTS DROPPED-------------
+# ROBUSTNESS CHECK: DIFFERENT NUMBERS OF JOINED DISTRICTS DROPPED---------------
 # 1: huge joined districts
 ```{r}
 # number of districts joined: 2, 4, 5, 6
 x <- c(6, 12, 15, 18)
 
-# 2
+# drop all joined districts
 joined_districts_to_drop <-
   crosswalk %>%
   group_by(fake_unit_id) %>%
@@ -155,7 +154,7 @@ mod_rc1_all_turnouts <-
   felm(sum_joined_dist_total ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
        data = df_analysis_dropped)
 
-# 4
+# joined DCCs: 4
 joined_districts_to_drop <-
   crosswalk %>%
   group_by(fake_unit_id) %>%
@@ -179,7 +178,7 @@ mod_rc1_4_turnouts <-
   felm(sum_joined_dist_total ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
        data = df_analysis_dropped)
 
-# 5
+# joined DCCs: 5
 joined_districts_to_drop <-
   crosswalk %>%
   group_by(fake_unit_id) %>%
@@ -203,7 +202,7 @@ mod_rc1_5_turnouts <-
   felm(sum_joined_dist_total ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
        data = df_analysis_dropped)
 
-# 6
+# joined DCCs: 6
 joined_districts_to_drop <-
   crosswalk %>%
   group_by(fake_unit_id) %>%
@@ -234,16 +233,16 @@ mod_rc1_6_turnouts <-
 ```{r}
 rc1_panels <-
   list(
-    "Panel A: All fake districts dropped" = list(
+    "Panel A: All joined districts excluded" = list(
       mod_rc1_all_votes_demo, mod_rc1_all_votes_est, mod_rc1_all_turnouts
     ),
-    "Panel B: joined districts >= 4 dropped" = list(
+    "Panel B: Joined DCCs >= 4 excluded" = list(
       mod_rc1_4_votes_demo, mod_rc1_4_votes_est, mod_rc1_4_turnouts
     ),
-    "Panel C: joined districts >= 5 dropped" = list(
+    "Panel C: Joined DCCs >= 5 excluded" = list(
       mod_rc1_5_votes_demo, mod_rc1_5_votes_est, mod_rc1_5_turnouts
     ),
-    "Panel D: joined districts >= 6 dropped" = list(
+    "Panel D: Joined DCCs >= 6 excluded" = list(
       mod_rc1_6_votes_demo, mod_rc1_6_votes_est, mod_rc1_6_turnouts
     )
   )
@@ -251,14 +250,13 @@ rc1_panels <-
 out <- modelsummary(
   rc1_panels, 
   stars = c("*" = 0.1, "**" = 0.05, "***" = 0.01),
-  coef_map = c("(Intercept)" = "(Intercept)",
-               "prop_Yellow" = 'Proportion of "Yellow" restaurants'),
+  coef_map = c("prop_Yellow" = 'Proportion of "Yellow" restaurants'),
   shape = "rbind",
   gof_map =
     tribble(
       ~raw, ~clean, ~fmt, ~omit,
-      "nobs", "No. of obs.", f2, F,
-      "r.squared", "$R^2$", f1, F),
+      "nobs", "No. of obs.", f2, FALSE,
+      "r.squared", "$R^2$", f1, FALSE),
   output = "data.frame") %>% 
   clean_names() %>%
   rows_insert(tibble(x = "Year FE", x1 = "Y", x2 = "Y", x3 = "Y")) %>%
@@ -279,13 +277,13 @@ out %>%
   footnote(general = c("*p<0.1; **p<0.05; ***p<0.01"),
            footnote_as_chunk = TRUE, 
            general_title = "",
-           escape = FALSE)
+           escape = TRUE)
 ```
 
 
 
 
-# ROBUSTNESS CHECK 2: CLOSED RESTAURANTS ADDED----------------------------------
+# ROBUSTNESS CHECK: CLOSED RESTAURANTS ADDED------------------------------------
 # DiD models with two-way fixed effects
 
 
@@ -349,9 +347,8 @@ f2 <- function(x) format(round(x, 0), big.mark = ",")
 out <- modelsummary(
   panels, 
   stars = c("*" = 0.1, "**" = 0.05, "***" = 0.01),
-  coef_map = c("(Intercept)" = "(Intercept)",
-               "prop_Yellow" = 'Proportion of "Yellow" restaurants',
-               "majority_yellow" = 'Majority of restaurants is "Yellow"'),
+  coef_map = c("prop_Yellow" = 'Proportion of "Yellow" restaurants',
+               "majority_yellow" = 'Majority of restaurants are "Yellow"'),
   gof_map =
     tribble(
       ~raw, ~clean, ~fmt, ~omit,
@@ -364,7 +361,7 @@ out <- modelsummary(
                      x4 = "Y", x5 = "Y", x6 = "Y")) %>%
   rows_insert(tibble(term = "District FE", x1 = "Y", x2 = "Y", x3 = "Y",
                      x4 = "Y", x5 = "Y", x6 = "Y"))
-  
+
 # latex output  
 out %>%
   kable("latex", 
@@ -380,13 +377,13 @@ out %>%
   footnote(general = c("*p<0.1; **p<0.05; ***p<0.01"),
            footnote_as_chunk = TRUE, 
            general_title = "",
-           escape = FALSE)
+           escape = TRUE)
 ```
 
 
 
 
-# ROBUSTNESS CHECK 3: UNCONTESTED DISTRICTS ADDED-------------------------------
+# ROBUSTNESS CHECK: UNCONTESTED DISTRICTS ADDED---------------------------------
 
 ```{r}
 # panels: all joined districts dropped
@@ -420,7 +417,7 @@ f2 <- function(x) format(round(x, 0), big.mark = ",")
 
 rc3_panels <- 
   list(
-    "Panel A: All joined districts dropped" = list(
+    "Panel A: All joined districts excluded" = list(
       mod_rc3a_1, mod_rc3a_2
     ),
     "Panel B: Votes for joined districts interpolated" = list(
@@ -431,8 +428,7 @@ rc3_panels <-
 out <- modelsummary(
   rc3_panels, 
   stars = c("*" = 0.1, "**" = 0.05, "***" = 0.01),
-  coef_map = c("(Intercept)" = "(Intercept)",
-               "prop_Yellow" = 'Proportion of "Yellow" restaurants'),
+  coef_map = c("prop_Yellow" = 'Proportion of "Yellow" restaurants'),
   shape = "rbind",
   gof_map =
     tribble(
@@ -448,24 +444,17 @@ out <- modelsummary(
 out %>%
   kable("latex", 
         booktabs = TRUE, 
-        escape = FALSE,
+        escape = TRUE,
         align = c("l", rep("c", 2)),
         col.names = linebreak(c("", "(1)", "(2)"), align = "c"),
         linesep = "") %>% 
   kable_styling(
     font_size = 12,
     latex_options = "hold_position") %>% 
-  add_header_above(header = c(" " = 1, "Vote shares for pro-democracy candidates" = 1, "Vote shares for pro-Beijing candidates" = 1)) %>%    
+  add_header_above(header = c(" " = 1, "Vote shares: pro-democracy" = 1, "Vote shares: pro-Beijing" = 1)) %>%    
   footnote(general = c("*p<0.1; **p<0.05; ***p<0.01"),
            footnote_as_chunk = TRUE, 
            general_title = "",
-           escape = FALSE)
+           escape = TRUE)
 ```
-
-
-
-
-
-
-
 
