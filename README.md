@@ -3,7 +3,12 @@ This repository includes code used in my senior thesis submitted to the Departme
 
 
 ## Notes:
-Code for data collection is written in `Python`.   
+Code for data collection is written in `Python 3.8.8`.   
+Run the following command and the `requirements.txt` file included in the `00-data/code/data-collection` folder.
+<pre><code>```python
+pip install -r requirements.txt
+```</code></pre>
+
 Code for data cleaning, analysis, and visualization is written in `R`/`R Markdown`.
 
 ### Date: April 3, 2023
