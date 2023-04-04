@@ -11,10 +11,6 @@ To-Do:
  -- Check bad coordinates
  -- Save a version for hand geocoding
  
-```{r setup, include=FALSE}
-rm(list = ls())
-knitr::opts_chunk$set(echo = TRUE)
-```
 
 # load packages and data
 
