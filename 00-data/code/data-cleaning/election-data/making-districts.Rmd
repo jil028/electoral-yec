@@ -1,0 +1,348 @@
+---
+title: "Making Districts"
+output: html_document
+---
+
+# load raw shapefiles and election data
+
+```{r}
+# load packages
+source("helper-packages.R")
+
+# 2011 
+shp_2011_raw <-
+  read_sf("~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2011_district_council_election/DCCA2011_SHP/DCCA2011.shp")
+
+## note that this shape doesn't have a default crs
+# set the raw file to its raw crs (2326)
+shp_2011_raw <- st_set_crs(shp_2011_raw, 2326)
+
+# 2015
+shp_2015_raw <-
+  read_sf("~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2015_district_council_election/DC_2015_poly Shapefile/GIH3_DC_2015_POLY.shp")
+
+# 2019
+shp_2019_raw <-
+  read_sf("~/Desktop/honors-thesis-main/00-data/raw-data/raw-election-data/2019_district_council_election/DCCA_2019_Shapefile/DCCA_2019.shp")
+
+# load stacked election data
+path <- "~/Desktop/honors-thesis-main/00-data/cleaned-data/election-data"
+
+election_raw <-
+  readRDS(glue("{path}/stacked_all.RDS")) 
+
+stacked_disco_sub <-
+  election_raw %>%
+  filter(year %in% c(2011, 2015, 2019))
+  
+```
+
+# transform: set crs to 4326
+
+```{r}
+# transform to 4326 and sort by district code
+shp_2011_transform <-
+  st_transform(shp_2011_raw, 4326) %>%
+  arrange(CACODE)
+
+
+shp_2015_transform <-
+  st_transform(shp_2015_raw, 4326) %>%
+  arrange(CACODE)
+
+
+shp_2019_transform <-
+  st_transform(shp_2019_raw, 4326) %>%
+  arrange(CACODE)
+```
+
+# subset and stack data
+
+```{r}
+# 2011
+sub_shp_11 <- 
+  shp_2011_transform[, c(10, 11, 16)]
+
+sub_shp_11 <-
+  sub_shp_11 %>%
+  mutate(year = 2011) %>%
+  relocate(year) %>%
+  arrange(CACODE)
+
+# 2015
+sub_shp_15 <- 
+  shp_2015_transform[, c(3, 4, 12)]
+
+sub_shp_15 <-
+  sub_shp_15 %>%
+  mutate(year = 2015) %>%
+  relocate(year) %>%
+  arrange(CACODE)
+
+# 2019
+sub_shp_19 <- 
+  shp_2019_transform[, c(1, 2, 6)]
+
+sub_shp_19 <-
+  sub_shp_19 %>%
+  mutate(year = 2019) %>%
+  relocate(year) %>%
+  arrange(CACODE)
+
+stacked_shp <-
+  sub_shp_11 %>%
+  bind_rows(sub_shp_15) %>%
+  bind_rows(sub_shp_19) %>%
+  arrange(ENAME)
+```
+
+
+```{r}
+# turn off s2
+sf::sf_use_s2(FALSE)
+# read the stacked shapefile as an sf object
+data <- 
+  stacked_shp %>%
+  # reshape the stacked data
+  pivot_wider(
+    id_cols = c(`ENAME`),
+    names_from = year,
+    names_prefix = "geometry_",
+    values_from = geometry
+  ) %>%
+  mutate(
+    # set crs for the three geometry variables
+    geometry_2011 = st_set_crs(geometry_2011, 4326),
+    geometry_2015 = st_set_crs(geometry_2015, 4326),
+    geometry_2019 = st_set_crs(geometry_2019, 4326)) 
+
+# initialize an empty data frame 
+overlap_pct <- data.frame(matrix(ncol = 3, nrow = 0))
+
+# loop over the rows of the data
+for (i in 1:nrow(data)) {
+  # get the geometry variables in each of the three year for a district
+  geom1 <- data$geometry_2011[i] # 2011
+  geom2 <- data$geometry_2015[i] # 2015
+  geom3 <- data$geometry_2019[i] # 2019
+  
+  # check if any of the input geometries are empty 
+  ## some districts were lost/no created until a specific year
+  if (st_is_empty(geom1) || st_is_empty(geom2) || st_is_empty(geom3)) {
+    # if any geometry is empty, set all overlap values to zero
+    overlap_2011_2015 <- 0
+    overlap_2011_2019 <- 0
+    overlap_2015_2019 <- 0
+  } else {
+    # calculate the intersection between each pair of geometry variables
+    inter12 <- st_intersection(geom1, geom2) # 2011 & 2015
+    inter13 <- st_intersection(geom1, geom3) # 2011 & 2019
+    inter23 <- st_intersection(geom2, geom3) # 2015 & 2019
+    
+    # check if the intersections are empty
+    if (st_is_empty(inter12)) {
+      overlap_2011_2015 <- 0
+    } else {
+      # calculate the area of the intersection and the percentage of overlap
+      inter12_area <- st_area(inter12)
+      area1 <- st_area(geom1)
+      area2 <- st_area(geom2)
+      overlap_2011_2015 <- inter12_area / (area1 + area2 - inter12_area)
+    }
+    
+    if (st_is_empty(inter13)) {
+      overlap_2011_2019 <- 0
+    } else {
+      # calculate the area of the intersection and the percentage of overlap
+      inter13_area <- st_area(inter13)
+      area1 <- st_area(geom1)
+      area3 <- st_area(geom3)
+      overlap_2011_2019 <- inter13_area / (area1 + area3 - inter13_area)
+    }
+    
+    if (st_is_empty(inter23)) {
+      overlap_2015_2019 <- 0
+    } else {
+      # calculate the area of the intersection and the percentage of overlap
+      inter23_area <- st_area(inter23)
+      area2 <- st_area(geom2)
+      area3 <- st_area(geom3)
+      overlap_2015_2019 <- inter23_area / (area2 + area3 - inter23_area)
+    }
+  }
+  
+  # add the overlap percentages to the output data frame
+  row <- data.frame(
+    overlap_2011_2015 = overlap_2011_2015,
+    overlap_2011_2019 = overlap_2011_2019,
+    overlap_2015_2019 = overlap_2015_2019
+  )
+  overlap_pct <- rbind(overlap_pct, row)
+}
+
+```
+
+
+```{r}
+# add the results to the original data
+data <- cbind(data, overlap_pct)
+```
+
+# save a version to work by hand: joining districts
+```{r}
+# get id
+ids <-
+  stacked_disco_sub %>%
+  rename("ENAME" = district_name)
+
+# find those districts that remain 90% unchanged across the three years
+districts_90pt_unchanged <-
+  data %>%
+  mutate(
+    overlap_2011_2015 = as.numeric(overlap_2011_2015),
+    overlap_2015_2019 = as.numeric(overlap_2015_2019),
+    overlap_2011_2019 = as.numeric(overlap_2011_2019)
+  ) %>%
+  filter(overlap_2011_2015 >= 0.90 & overlap_2015_2019 >= 0.90)
+
+# create a binary indicator for those 90% unchanged districts
+unchanged_90pt_districts <-
+  districts_90pt_unchanged %>%
+  dplyr::select(ENAME) %>%
+  mutate(
+    unchanged_90pt = 1
+  )
+
+# save a data frame for joining districts that changed more than 10% by hand
+hand <-
+  data %>%
+  pivot_longer(
+    cols = contains("geometry"),
+    names_to = "year",
+    values_to = "geometry"
+  ) %>%
+  mutate(
+    year = substr(year, 10, 13),
+    year = as.numeric(year)
+  ) %>%
+  left_join(ids, by = c("year", "ENAME")) %>%
+  dplyr::select(year, district_code, ENAME, geometry) %>%
+  arrange(ENAME, year) %>%
+  distinct()
+
+# ad hoc code for handcoding
+# hand_sub <-
+#   hand %>%
+#   filter(unchanged_90pt == 0) %>%
+#   arrange(ENAME)
+```
+
+# -----------------------------------------------------------------------------
+# sample code for plot a district in a year and joining other districts
+
+```{r}
+# ggplot() + 
+#   theme_bw()+
+#   geom_sf(data = hand$geometry[25], fill = 'blue', alpha = 0.3) +
+#   geom_sf(data = hand$geometry[26], fill = 'red', alpha = 0.2) +
+#   geom_sf(data = hand$geometry[27], fill = 'green', alpha = 0.2) +
+#   geom_sf(data = hand$geometry[511], fill = 'yellow', alpha = 0.2) +
+#   geom_sf(data = hand$geometry[512], fill = 'black', alpha = 0.2) +
+#   geom_sf(data = hand$geometry[513], fill = 'orange', alpha = 0.2) 
+```
+
+# appendix: show the procedure
+
+```{r}
+unchanged_2011 <-
+  ggplot() +
+  geom_sf(data = hand$geometry[1], fill = 'coral', alpha = 0.3) +
+  theme_bw()
+
+unchanged_2015 <-
+  ggplot() +
+  geom_sf(data = hand$geometry[2], fill = "darkcyan", alpha = 0.3) +
+  theme_bw()
+
+unchanged_2019 <-
+  ggplot() +
+  geom_sf(data = hand$geometry[3], fill = "azure3", alpha = 0.3) +
+  theme_bw()
+
+unchanged <-
+  plot_grid(unchanged_2011, unchanged_2015, unchanged_2019, labels = c('2011', '2015', "2019"), ncol = 3)
+
+joined <-
+  ggplot() +
+  geom_sf(data = hand$geometry[1], fill = 'coral', alpha = 0.2) +
+  geom_sf(data = hand$geometry[2], fill = "darkcyan", alpha = 0.2) +
+  geom_sf(data = hand$geometry[3], fill = "azure3", alpha = 0.2) +
+  ggtitle("Finalized joined district: A Kung Ngan, 2011-2019") +
+  theme_bw() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 10)
+  )
+```
+
+
+```{r}
+changed1_2011 <-
+  ggplot() +
+  geom_sf(data = hand$geometry[19], fill = 'coral', alpha = 0.3) +
+  theme_bw()
+
+changed2_2015 <-
+  ggplot() +
+  geom_sf(data = hand$geometry[20], fill = "darkcyan", alpha = 0.3) +
+  theme_bw()
+
+changed3_2019 <-
+  ggplot() +
+  geom_sf(data = hand$geometry[21], fill = "azure3", alpha = 0.3) +
+  theme_bw()
+
+changed4_2019 <-
+  ggplot() +
+  geom_sf(data = hand$geometry[1039], fill = "yellow", alpha = 0.3) +
+  theme_bw()
+
+changed5_2019 <-
+  ggplot() +
+  geom_sf(data = hand$geometry[1040], fill = "darkorchid", alpha = 0.3) +
+  theme_bw()
+
+changed6_2019 <-
+  ggplot() +
+  geom_sf(data = hand$geometry[1041], fill = "darkgreen", alpha = 0.3) +
+  theme_bw()
+
+changed <-
+  plot_grid(changed1_2011, changed2_2015, changed3_2019, 
+            changed4_2019, changed5_2019, changed6_2019,
+            labels = c('2011', '2015', "2019"), ncol = 3)
+
+combined <-
+  ggplot() +
+  geom_sf(data = hand$geometry[19], fill = 'coral', alpha = 0.3) +
+  geom_sf(data = hand$geometry[20], fill = "darkcyan", alpha = 0.3) +
+  geom_sf(data = hand$geometry[21], fill = "azure3", alpha = 0.3) +
+  geom_sf(data = hand$geometry[1039], fill = "yellow", alpha = 0.3) +
+  geom_sf(data = hand$geometry[1040], fill = "darkorchid", alpha = 0.9) +
+  geom_sf(data = hand$geometry[1041], fill = "darkgreen", alpha = 0.3) +
+  theme_bw()
+
+combined_final <-
+  ggplot() +
+  geom_sf(data = hand$geometry[19], fill = 'grey', alpha = 0.3) +
+  geom_sf(data = hand$geometry[20], fill = "grey", alpha = 0.3) +
+  geom_sf(data = hand$geometry[21], fill = "grey", alpha = 0.3) +
+  geom_sf(data = hand$geometry[1039], fill = "grey", alpha = 0.3) +
+  geom_sf(data = hand$geometry[1040], fill = "grey", alpha = 0.3) +
+  geom_sf(data = hand$geometry[1041], fill = "grey", alpha = 0.3) +
+  theme_bw()
+
+joined_district <-
+  plot_grid(combined, combined_final, labels = c('Overlap', 'Joined'), nrow = 2)
+
+```
+
