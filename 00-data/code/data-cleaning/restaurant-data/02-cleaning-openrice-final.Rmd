@@ -25,6 +25,7 @@ removal_clean <-
 ```{r}
 # standardize restaurant names by extracting trational chinese characters only
 # regular expression to match Traditional Chinese characters
+
 tc_regex <- "[\\u4E00-\\u9FFF\\u3400-\\u4DBF]"
 
 openrice_clean <-
