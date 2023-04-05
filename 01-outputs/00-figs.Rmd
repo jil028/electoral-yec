@@ -371,6 +371,7 @@ timeline_2019_final <-
 
 # figure: locationns of protest sites ------------------------------------------
 # source: HKU
+# make sure to run lines 111 to 151 again before this
 
 ```{r}
 ##############
@@ -388,7 +389,7 @@ cleaned_protests <-
 protest_map <-
   ggplot() +
   geom_sf(data = hk_shp) +
-  geom_sf(data = out, aes(fill = prop)) +
+  geom_sf(data = out, aes(fill = prop)) + 
   scale_fill_gradient(low = "white", high = "gold") +
   geom_sf(data = cleaned_protests, shape = 9, color = "orangered3", 
           size = 2, alpha = 0.5) +
