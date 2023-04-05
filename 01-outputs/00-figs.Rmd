@@ -28,7 +28,7 @@ source_dir <- "enter source directory"
 ```
 
 
-# figure: trend of turnout rates of elections in Hong Kong, 2011-2019----------
+# figure: trend of turnout rates of elections in Hong Kong, 2011-2021----------
 ```{r}
 ############
 # Figure 1 #
