@@ -9,6 +9,7 @@ Purpose: to clean data and create figures in the thesis.
 ```{r}
 library(readxl)
 library(tidyverse)
+library(sf)
 library(ggrepel)
 library(plotly)
 library(forestplot)
