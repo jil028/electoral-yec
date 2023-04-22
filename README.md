@@ -7,7 +7,7 @@ This repository includes code used in my senior thesis submitted to the Departme
 Run the following command and the `requirements.txt` file included in the `00-data/code/data-collection` folder.
 <pre><code>pip install -r requirements.txt</code></pre>
 
-2. Code for data cleaning, analysis, and visualization is written in `R`/`R Markdown`.  
+2. Code for data cleaning, analysis, and visualization is written in `R`/`R Markdown`. See each `helper-packages.R` file for required packages.  
 
 3. Code for writing the paper and compiling the final pdf document is written in `LaTeX`.
 
