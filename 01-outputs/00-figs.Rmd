@@ -7,22 +7,7 @@ Purpose: to clean data and create figures in the thesis.
 # load packages
 
 ```{r}
-library(readxl)
-library(tidyverse)
-library(sf)
-library(ggrepel)
-library(plotly)
-library(forestplot)
-library(vistime)
-library(broom)
-library(Amelia)
-library(modelsummary)
-library(kableExtra)
-library(glue)
-library(wesanderson)
-library(cowplot)
-library(patchwork)
-library(showtext)
+source("helper-packages.R")
 
 # set data source directory
 source_dir <- "enter source directory"
