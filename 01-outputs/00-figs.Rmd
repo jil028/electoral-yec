@@ -23,7 +23,7 @@ library(cowplot)
 library(patchwork)
 library(showtext)
 
-# set source directory
+# set data source directory
 source_dir <- "enter source directory"
 ```
 
