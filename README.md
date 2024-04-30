@@ -1,5 +1,5 @@
-# Senior Thesis: "From Dim Sum to Polling Stations: The Electoral Impact of Hong Kong's Yellow Economic Circle"
-This repository includes code used in my senior thesis submitted to the Department of Political Science's Senior Honors Program at UC San Diego.
+# From Dim Sum to Polling Stations: The Electoral Impact of Hong Kong's Yellow Economic Circle
+This repository includes code used in this paper.
 
 
 ## Notes:
@@ -11,4 +11,4 @@ Run the following command and the `requirements.txt` file included in the `00-da
 
 3. Code for writing the paper and compiling the final pdf document is written in `LaTeX`.
 
-### Date: April 3, 2023
+### Date: April 30, 2024
