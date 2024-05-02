@@ -30,9 +30,13 @@ openrice_robustness_check <-
 rc3a_df_analysis <-
   readRDS(glue("{path}/df_rc3a_analysis.RDS"))
 
-# load 
+# load analysis data frame for robustness check
 rc3b_df_analysis <-
   readRDS(glue("{path}/df_rc3b_analysis.RDS")) 
+
+# load analysis data frame for alternative treatment var
+df_analysis_raw_no <-
+  readRDS(glue("{path}/df_analysis_raw_no.RDS"))
 ```
 
 
@@ -50,6 +54,66 @@ vote_shares_mod2 <-
   felm(prop_votes_demo ~ majority_yellow|year + fake_unit_id|0|fake_unit_id, 
        data = df_analysis)
 ```
+
+
+
+# bootstrap standard errors
+
+# ```{r}
+# # function for bootstrapping
+# bootstrap_felm <- function(data, indices) {
+#   boot_data <- data[indices, ] # resample with replacement
+#   model <- felm(prop_votes_demo ~ prop_Yellow | year + fake_unit_id | 0 | fake_unit_id, data = boot_data)
+#   return(coef(model)) # return the coefficient
+# }
+# 
+# 
+# set.seed(123) 
+# bootstrap_indices <- lapply(1:1000, function(i) sample(nrow(df_analysis), 
+#                                                        replace = TRUE))
+# bootstrap_results <- lapply(bootstrap_indices, bootstrap_felm, 
+#                             data = df_analysis)
+# 
+# # convert list of coefficients to a matrix 
+# coef_matrix <- do.call(rbind, bootstrap_results)
+# 
+# # calculate standard errors
+# bootstrapped_se <- apply(coef_matrix, 2, sd)
+# 
+# # the bootstrapped standard error for 'prop_Yellow'
+# prop_Yellow_se <- bootstrapped_se['prop_Yellow']
+# ```
+# 
+# 
+# # bootstrapped standard errors for majority (binary variable)
+# 
+# ```{r}
+# # function for bootstrapping
+# bootstrap_felm <- function(data, indices) {
+#   boot_data <- data[indices, ] # resample with replacement
+#   model <- felm(prop_votes_demo ~ majority_yellow | year + fake_unit_id | 0 | fake_unit_id, data = boot_data)
+#   return(coef(model)) # return the coefficient
+# }
+# 
+# 
+# set.seed(123) 
+# bootstrap_indices <- lapply(1:1000, function(i) sample(nrow(df_analysis), replace = TRUE))
+# bootstrap_results <- lapply(bootstrap_indices, bootstrap_felm, data = df_analysis)
+# 
+# # convert list of coefficients to a matrix 
+# coef_matrix <- do.call(rbind, bootstrap_results)
+# 
+# # calculate standard errors
+# bootstrapped_se <- apply(coef_matrix, 2, sd)
+# 
+# # bootstrapped standard error for 'majority_yellow'
+# majority_yellow_se <- bootstrapped_se['majority_yellow']
+# majority_yellow_se
+# ```
+
+
+
+
 
 ```{r}
 # outcome: vote shares for pro-Beijing, continuous predictor
@@ -457,4 +521,245 @@ out %>%
            general_title = "",
            escape = TRUE)
 ```
+
+
+# Power Analysis----------------------------------------------------------------
+
+```{r}
+df_analysis_no_geo <- 
+  df_analysis %>%
+  select(-grouped_geometry)
+
+
+imputed_data <- mice(df_analysis_no_geo, m=5, method='pmm')
+df_analysis_imputed <- complete(imputed_data, 1)
+```
+
+
+```{r}
+set.seed(123)
+# vote shares for pro-democracy candidates
+# set the parameters from the output
+# estimated_effect_size <- -0.06481 
+# std_error <- 0.05876
+
+# simulation parameters
+# no. of obs
+n <- 2000
+n_simulations <- 1000
+alpha <- 0.001
+
+# initialize a vector to store p-values from each simulation
+p_values <- c()
+
+for (i in 1:n_simulations) {
+  print(i)
+  # Sample units
+  sample_ids <- sample(1:nrow(df_analysis_imputed), size = n, replace = TRUE)
+  
+  simulated_model <- felm(prop_votes_demo ~ prop_Yellow | year + fake_unit_id | 0 | fake_unit_id, 
+                          df_analysis_imputed[sample_ids,])
+  p_values <- c(p_values, unname(simulated_model$pval))
+}
+print(mean(p_values))
+plot(density(p_values))
+
+#   #  sampling from observed prop_Yellow values
+#   sampled_prop_Yellow <- sample(df_analysis_imputed$prop_Yellow, size = 1500, replace = TRUE)
+#   
+#   # sample to match the new sample size
+#   sampled_year <- sample(df_analysis_imputed$year, size = 1500, replace = TRUE)
+#   sampled_fake_unit_id <- sample(df_analysis_imputed$fake_unit_id, size = 1500, replace = TRUE)
+# 
+#   # assuming a simple linear effect and normal error for illustration
+#   simulated_prop_votes_demo <- estimated_effect_size * sampled_prop_Yellow + rnorm(n, 0, std_error)
+#   
+#   
+#   df_simulated <- data.frame(prop_votes_demo = simulated_prop_votes_demo, 
+#                              prop_Yellow = sampled_prop_Yellow,
+#                              year = sampled_year,  # Now using sampled_year
+#                              fake_unit_id = sampled_fake_unit_id)  # Now using sampled_fake_unit_id
+#   
+#   # fit the data
+#   simulated_model <- felm(prop_votes_demo ~ prop_Yellow | year + fake_unit_id | 0 | fake_unit_id, 
+#                           df_simulated)
+#   p_values[i] <- summary(simulated_model)$coefficients["prop_Yellow", "Pr(>|t|)"]
+# }
+
+
+```
+
+
+# Outcome 1: Pro-democracy vote shares
+
+```{r}
+n_to_sample <- round(c(1008 * 0.1, 1008 * 0.5, 1008 * 1, 1008 * 1.5, 1008 * 2, 1008 * 2.5))
+n_simulations <- 1000
+
+# initialize an empty data frame to store results
+results_df <- data.frame(sample_size = c(), p_value = c())
+
+for (n in n_to_sample) {
+  # initialize an empty vector
+  p_values <- c()
+  
+  #print(i)
+  
+  for (i in 1:n_simulations) {
+    print(i)
+    # sample units
+    sample_ids <- sample(1:nrow(df_analysis_imputed), size = n, replace = TRUE)
+    
+    simulated_model <- felm(prop_votes_demo ~ prop_Yellow | year + fake_unit_id | 0 | fake_unit_id, 
+                            df_analysis_imputed[sample_ids,])
+    p_values <- c(p_values, unname(simulated_model$pval))
+  }
+  
+  # add results to the data frame 
+  results_df <- rbind(results_df, data.frame(sample_size = rep(n, n_simulations), p_value = p_values))
+}
+
+
+
+```
+
+
+
+```{r}
+pa_pro_dem <-
+  results_df %>%
+  ggplot(aes(x = p_value)) +
+  geom_density(alpha = 0.3, fill = "gold") +
+  facet_wrap(~sample_size, scales = "free", 
+             ncol = 3, nrow = 2,
+             labeller = labeller(
+               sample_size = function(x) paste("Simulated sample size =", x))
+             ) + 
+  labs(title = " ",
+       x = "p-value",
+       y = "Density") +
+  theme_bw() +
+  theme(
+    strip.text.x = element_text(size = 12), 
+    strip.background = element_rect(fill = "cornsilk2"),
+    legend.position = "none"
+  )
+```
+
+
+
+# Outcome 2: Pro-establishment vote shares
+
+```{r}
+n_to_sample <- round(c(1008 * 0.1, 1008 * 0.5, 1008 * 1, 1008 * 1.5, 1008 * 2, 1008 * 2.5))
+n_simulations <- 1000
+
+# initialize an empty data frame to store results
+results_df <- data.frame(sample_size = c(), p_value = c())
+
+for (n in n_to_sample) {
+  # initialize an empty vector
+  p_values <- c()
+  
+  print(i)
+  
+  for (i in 1:n_simulations) {
+    print(i)
+    # sample units
+    sample_ids <- sample(1:nrow(df_analysis_imputed), size = n, replace = TRUE)
+    
+    simulated_model <- felm(prop_votes_est ~ prop_Yellow | year + fake_unit_id | 0 | fake_unit_id, 
+                            df_analysis_imputed[sample_ids,])
+    p_values <- c(p_values, unname(simulated_model$pval))
+  }
+  
+  # add results to the data frame 
+  results_df <- rbind(results_df, data.frame(sample_size = rep(n, n_simulations), p_value = p_values))
+}
+
+```
+
+
+
+```{r}
+pa_pro_est <-
+  results_df %>%
+  ggplot(aes(x = p_value)) +
+  geom_density(alpha = 0.3, fill = "cornflowerblue") +
+  facet_wrap(~sample_size, scales = "free", 
+             ncol = 3, nrow = 2,
+             labeller = labeller(
+               sample_size = function(x) paste("Simulated sample size =", x))
+             ) + 
+  labs(title = " ",
+       x = "p-value",
+       y = "Density") +
+  theme_bw() +
+  theme(
+    strip.text.x = element_text(size = 12), 
+    strip.background = element_rect(fill = "aliceblue"),
+    legend.position = "none"
+  )
+
+```
+
+
+# Outcome 3: Turnouts
+
+```{r}
+n_to_sample <- round(c(1008 * 0.1, 1008 * 0.5, 1008 * 1, 1008 * 1.5, 1008 * 2, 1008 * 2.5))
+n_simulations <- 1000
+
+# initialize an empty data frame to store results
+results_df <- data.frame(sample_size = c(), p_value = c())
+
+for (n in n_to_sample) {
+  # initialize an empty vector
+  p_values <- c()
+  
+  print(i)
+  
+  for (i in 1:n_simulations) {
+    print(i)
+    # sample units
+    sample_ids <- sample(1:nrow(df_analysis_imputed), size = n, replace = TRUE)
+    
+    simulated_model <- felm(sum_joined_dist_total ~ prop_Yellow | year + fake_unit_id | 0 | fake_unit_id, 
+                            df_analysis_imputed[sample_ids,])
+    p_values <- c(p_values, unname(simulated_model$pval))
+  }
+  
+  # add results to the data frame 
+  results_df <- rbind(results_df, data.frame(sample_size = rep(n, n_simulations), p_value = p_values))
+}
+
+```
+
+
+
+```{r}
+pa_turnouts <-
+  results_df %>%
+  ggplot(aes(x = p_value)) +
+  geom_density(alpha = 0.3, fill = "cadetblue") +
+  facet_wrap(~sample_size, scales = "free", 
+             ncol = 3, nrow = 2,
+             labeller = labeller(
+               sample_size = function(x) paste("Simulated sample size =", x))
+             ) + 
+  labs(title = " ",
+       x = "p-value",
+       y = "Density") +
+  theme_bw() +
+  theme(
+    strip.text.x = element_text(size = 12), 
+    strip.background = element_rect(fill = "honeydew2"),
+    legend.position = "none"
+  )
+
+```
+
+
+
+
 
