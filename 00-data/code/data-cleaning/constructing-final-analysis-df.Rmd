@@ -87,7 +87,7 @@ joined_districts_shares <-
 ```{r}
 # get the 2019 district geometries
 joined_districts_geometries_2019 <-
-  dplyr::joined_districts_shares %>%
+  joined_districts_shares %>%
   select(fake_unit_id, year, grouped_geometry) %>%
   filter(year == 2019) %>%
   mutate(
@@ -116,6 +116,9 @@ cleaned_openrice_robustness_check <-
 
 # spatial join and count
 ```{r}
+# turn off s2
+sf::sf_use_s2(FALSE)
+
 joined_restaurants_districts <-
   st_join(st_as_sf(joined_districts_geometries_2019), cleaned_openrice) %>%
   # drop those districts without any restaurants
@@ -165,6 +168,8 @@ prop_ideo_restaurants <-
         TRUE ~ 0
       )
   ) 
+
+  
 
 ```
 
@@ -553,6 +558,43 @@ interpolated <-
   left_join(geometry_interpolated, by = c("fake_unit_id", "year", "CACODE"))
 ```
 
+
+
+```{r}
+# # clean
+# interpolated_joined_crosswalk_uncontested <-
+#   interpolated %>%
+#   #left_join(clean_uncontested, by = c("fake_unit_id", "year", "CACODE")) %>%
+#   mutate(
+#     votes_pro_demo =
+#       case_when(
+#         str_detect(fake_unit_id, "^ORIG") & uncontested_candidate_ideo == "pro-democracy" ~ 1,
+#         TRUE ~ as.numeric(votes_pro_demo)
+#       ),
+# 
+#     votes_pro_est =
+#       case_when(
+#         str_detect(fake_unit_id, "^ORIG") & uncontested_candidate_ideo == "pro-establishment" ~ 1,
+#         TRUE ~ as.numeric(votes_pro_est)
+#       ),
+# 
+#     votes_independent =
+#       case_when(
+#         str_detect(fake_unit_id, "^ORIG") & uncontested_candidate_ideo == "independent" ~ 1,
+#         TRUE ~ as.numeric(votes_independent)
+#       )
+#    ) %>%
+#    # mutate(
+#    #   votes_pro_demo = round(votes_pro_demo),
+#    #   votes_pro_est = round(votes_pro_est),
+#    #   votes_independent = round(votes_independent)
+#    # ) %>%
+#    mutate(total = rowSums(select(., votes_pro_demo, votes_pro_est, votes_independent), na.rm = TRUE))
+```
+
+
+
+
 ```{r}
 interpolated_joined_districts_shares <-
   interpolated %>%
@@ -895,4 +937,67 @@ df_hte1_analysis <-
   
 ```
 
+
+# PREP DATA FOR HTE: RATINGS ---------------------------------------------------
+
+```{r}
+joined_restaurants_districts <-
+  st_join(st_as_sf(joined_districts_geometries_2019), cleaned_openrice) %>%
+  # drop those districts without any restaurants
+  drop_na(source)
+
+# group the data by district and ideology, and count the number of restaurants in each group
+count_df <- 
+  joined_restaurants_districts %>%
+  group_by(fake_unit_id, ideo_text) %>%
+  summarise(n_restaurants = n()) 
+
+# calculate the total number of restaurants andthe average rating in each district
+total_df <- 
+  joined_restaurants_districts %>%
+  group_by(fake_unit_id) %>%
+  summarise(
+    total_restaurants = n(),
+    avg_rating = mean(rating)
+  ) 
+
+# extract avg ratings
+avg_ratings <- 
+  total_df %>%
+  select(fake_unit_id, avg_rating)
+
+# add to the main data frame
+df_analysis_w_ratings <-
+  df_analysis %>%
+  left_join(avg_ratings, by = "fake_unit_id")
+
+write_rds(df_analysis_w_ratings, "/Users/jiayili/Desktop/honors-thesis-main/00-data/cleaned-data/df_analysis_w_ratings.RDS")
+```
+
+
+
+
+
+
+
+# PREP DATA FOR ALTERNATIVE TREATMENT VARIABLES -------------------------------
+
+```{r}
+# raw number of restaurants
+number_ideo_restaurants <-
+  left_join(count_df, total_df, by = "fake_unit_id") %>%
+  pivot_wider(
+    id_cols = `fake_unit_id`,
+    names_from = `ideo_text`,
+    names_prefix = "no_restaurants_",
+    values_from = `n_restaurants`
+  )
+
+# join the main df
+df_analysis_raw_no <-
+  joined_districts_shares %>%
+  left_join(number_ideo_restaurants, by = "fake_unit_id") 
+
+write_rds(df_analysis_raw_no, "/Users/jiayili/Desktop/honors-thesis-main/00-data/cleaned-data/df_analysis_raw_no.RDS")
+```
 
