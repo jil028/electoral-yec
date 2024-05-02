@@ -11,4 +11,6 @@ Run the following command and the `requirements.txt` file included in the `00-da
 
 3. Code for writing the paper and compiling the final pdf document is written in `LaTeX`.
 
+The most recent version of this paper is available at <a>https://www.dropbox.com/scl/fi/z4m3n9xp2t9uggh8k3uvf/jiayi-li-yec.pdf?rlkey=njlm7afme0a7it74a5rz2k3yj&dl=0<a>
+
 ### Date: April 30, 2024
