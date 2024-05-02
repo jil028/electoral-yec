@@ -13,6 +13,7 @@ library(janitor)
 # data analysis
 library(lfe)
 library(broom)
+library(mice)
 
 # visualization
 library(ggpubr)
