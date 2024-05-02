@@ -2,19 +2,20 @@
 title: "Visualization: Figures"
 output: html_document
 ---
-Purpose: to clean data and create figures in the thesis.
+Purpose: to clean data and create figures in the background and results sections.
 
 # load packages
 
 ```{r}
 source("helper-packages.R")
 
-# set data source directory
-source_dir <- "enter source directory"
+# set source directory
+source_dir <- "/Users/jiayili/Desktop/honors-thesis-main/01-outputs/raw-data"
+path <- "~/Desktop/honors-thesis-main/00-data/cleaned-data"
 ```
 
 
-# figure: trend of turnout rates of elections in Hong Kong, 2011-2021----------
+# figure: trend of turnout rates of elections in Hong Kong, 2011-2019----------
 ```{r}
 ############
 # Figure 1 #
@@ -36,13 +37,13 @@ hk_elections_turnouts <-
 plt_trend_turnouts <- 
   hk_elections_turnouts %>%
   ggplot(aes(x = year, y = turnout, label = turnout)) + 
-  geom_point(stat = "identity", color = "darkgreen", 
-             fill = "darkgreen", size = 12.5)  +
+  geom_point(stat = "identity", color = "cadetblue", 
+             fill = "cadetblue", size = 12.5)  +
   geom_segment(aes(y = 0, 
                    x = year, 
                    yend = turnout, 
                    xend = year), 
-               color = "darkgreen") +
+               color = "cadetblue") +
   geom_text(color = "white", size = 4) +
   labs(y = "Cumulative turnourt rate (%)",
        x = "") +
@@ -209,12 +210,30 @@ heatmap_blue <-
 
 # put the two heatmaps together
 heatmap <-
-  heatmap_yellow / heatmap_blue
+  heatmap_yellow + heatmap_blue
 
-pdf('heatmap.pdf', width = 9, height = 12)
-heatmap
-dev.off()
+# pdf('heatmap.pdf', width = 9, height = 12)
+# heatmap
+# dev.off()
 ```
+
+
+
+```{r}
+pdf('heatmap_blue.pdf', width = 7, height = 4)
+  heatmap_blue 
+dev.off()  
+```
+
+
+```{r}
+pdf('heatmap_small.pdf', width = 12, height = 3.5)
+  heatmap
+dev.off()  
+```
+
+
+
 
 
 # figure: electoral democracy index---------------------------------------------
@@ -357,7 +376,6 @@ timeline_2019_final <-
 
 # figure: locationns of protest sites ------------------------------------------
 # source: HKU
-# make sure to run lines 111 to 151 again before this
 
 ```{r}
 ##############
@@ -365,7 +383,7 @@ timeline_2019_final <-
 ##############
 
 protests <-
-  read_sf(glue("{source_dir}/event_v2/event.shp"))
+  read_sf("/Users/jiayili/Desktop/honors-thesis-main/01-outputs/raw-data/event_v2/event.shp")
 
 cleaned_protests <-
   protests %>%
@@ -375,7 +393,7 @@ cleaned_protests <-
 protest_map <-
   ggplot() +
   geom_sf(data = hk_shp) +
-  geom_sf(data = out, aes(fill = prop)) + 
+  geom_sf(data = out, aes(fill = prop)) +
   scale_fill_gradient(low = "white", high = "gold") +
   geom_sf(data = cleaned_protests, shape = 9, color = "orangered3", 
           size = 2, alpha = 0.5) +
@@ -445,7 +463,35 @@ df_parallel <-
     mean_prop_votes_est = mean(prop_votes_est, na.rm = TRUE),
     mean_prop_turnours = mean(sum_joined_dist_total, na.rm = TRUE)
   )
+
 ```
+```{r}
+df_parallel_with_ci <-
+  df_analysis %>%
+  left_join(group, by = "fake_unit_id") %>%
+  group_by(year, group) %>%
+  summarise(
+    mean_prop_votes_demo = mean(prop_votes_demo, na.rm = TRUE),
+    mean_prop_votes_est = mean(prop_votes_est, na.rm = TRUE),
+    mean_prop_turnouts = mean(sum_joined_dist_total, na.rm = TRUE),
+    n = n(), # number of observations
+    # standard errors
+    se_demo = sd(prop_votes_demo, na.rm = TRUE) / sqrt(n),
+    se_est = sd(prop_votes_est, na.rm = TRUE) / sqrt(n),
+    se_turnouts = sd(sum_joined_dist_total, na.rm = TRUE) / sqrt(n)
+  ) %>%
+  # find confidence intervals
+  mutate(
+    lower_ci_demo = mean_prop_votes_demo - qt(0.975, df=n-1) * se_demo,
+    upper_ci_demo = mean_prop_votes_demo + qt(0.975, df=n-1) * se_demo,
+    lower_ci_est = mean_prop_votes_est - qt(0.975, df=n-1) * se_est,
+    upper_ci_est = mean_prop_votes_est + qt(0.975, df=n-1) * se_est,
+    lower_ci_turnouts = mean_prop_turnouts - qt(0.975, df=n-1) * se_turnouts,
+    upper_ci_turnouts = mean_prop_turnouts + qt(0.975, df=n-1) * se_turnouts
+  )
+```
+
+
 
 ```{r}
 # set ticks and tick labels
@@ -534,11 +580,113 @@ plt_parallel_trends <-
   nrow = 2
 )
 
-pdf('parallel-trends-1.pdf', width = 14, height = 10)
-plt_parallel_trends
-dev.off()
+# pdf('parallel-trends-1.pdf', width = 14, height = 10)
+# plt_parallel_trends
+# dev.off()
 
 ```
+
+
+```{r}
+plt_parallel_trends_votes_demo_ci <-
+  df_parallel_with_ci %>%
+  ggplot(aes(x = year, y = mean_prop_votes_demo, color = group)) +
+  geom_point(size = 3) +
+  geom_line(linewidth = 1.5) +
+  geom_errorbar(aes(ymin = lower_ci_demo, ymax = upper_ci_demo), width = 0.3) +
+  geom_vline(xintercept = 2017, linetype = 2, color = "black") +
+  scale_x_continuous(breaks = ticks, labels = tick_labels) +
+  ylim(c(0, 0.5)) +
+  ylab("Vote shares: pro-democracy") +
+  # recode the legend
+  scale_color_manual(name = "Group",
+                     labels = c("Control", "Treatment"),
+                     values = wes_palette("FrenchDispatch")) +
+  theme_bw() +
+  theme(
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(size = 18),
+    axis.title.y = element_text(size = 18),
+    axis.text.y = element_text(size = 18),
+    legend.position = "none",
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 16)
+  )
+
+plt_parallel_trends_votes_est_ci <-
+  df_parallel_with_ci %>%
+  ggplot(aes(x = year, y = mean_prop_votes_est, color = group)) +
+  geom_point(size = 3) +
+  geom_line(linewidth = 1.5) +
+  geom_errorbar(aes(ymin = lower_ci_est, ymax = upper_ci_est), width = 0.3) +
+  geom_vline(xintercept = 2017, linetype = 2, color = "black") +
+  scale_x_continuous(breaks = ticks, labels = tick_labels) +
+  ylim(c(0, 0.7)) +
+  ylab("Vote shares: pro-Beijing") +
+  # recode the legend
+  scale_color_manual(name = "Group",
+                     labels = c("Control", "Treatment"),
+                     values = wes_palette("FrenchDispatch")) +
+  theme_bw() +
+  theme(
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(size = 18),
+    axis.title.y = element_text(size = 18),
+    axis.text.y = element_text(size = 18),
+    legend.position = "none",
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 16)
+  )
+
+
+plt_parallel_trends_turnouts_ci <-
+  df_parallel_with_ci %>%
+  ggplot(aes(x = year, y = mean_prop_turnouts, color = group)) +
+  geom_point(size = 3) +
+  geom_line(linewidth = 1.5) +
+  geom_errorbar(aes(ymin = lower_ci_turnouts, ymax = upper_ci_turnouts), width = 0.3) +
+  geom_vline(xintercept = 2017, linetype = 2, color = "black") +
+  scale_x_continuous(breaks = ticks, labels = tick_labels) +
+  ylab("Turnouts: total votes cast") +
+  # recode the legend
+  scale_color_manual(name = "Group",
+                     labels = c("Control", "Treatment"),
+                     values = wes_palette("FrenchDispatch")) +
+  theme_bw() +
+  theme(
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(size = 18),
+    axis.title.y = element_text(size = 18),
+    axis.text.y = element_text(size = 18),
+    legend.direction = "horizontal", 
+    legend.position = "bottom",
+    legend.box = "horizontal",
+    legend.title = element_text(size = 18),
+    legend.text = element_text(size = 18)
+  )
+
+
+
+# put them together
+plt_parallel_trends_ci <-
+  plot_grid(
+  plot_grid(plt_parallel_trends_votes_demo_ci, plt_parallel_trends_votes_est_ci, nrow = 1, ncol = 2, labels = c('A', 'B')),
+  plot_grid(NULL, plt_parallel_trends_turnouts_ci, NULL, nrow = 1, rel_widths = c(0.5, 2, 0.5), labels = c("C")),
+  nrow = 2
+)
+
+pdf('parallel-trends-ci.pdf', width = 11, height = 10)
+plt_parallel_trends_ci
+dev.off()
+```
+
+
+
+
+
+
+
+
 
 
 # plot subgroup effects --------------------------------------------------------
@@ -556,6 +704,9 @@ df_hte1_analysis <-
   dplyr::select(-grouped_geometry)
 
 df_hte1_analysis$group <- factor(df_hte1_analysis$group, level = c("Above Median", "Below Median"))
+
+df_hte3_analysis <-
+  readRDS(glue("{path}/df_analysis_w_ratings.RDS"))
 ```
 
 # run analysis
@@ -610,35 +761,80 @@ hte2_b <-
 ```
 
 
+# subgroup 3: ratings
+# story here: offering consistently exceptionally good food, customers ignore their political preferences
+
+```{r}
+# add a group variable in the data frame: median average rating as the threshold
+df_hte3_analysis_added <-
+  df_hte3_analysis %>%
+  mutate(
+    group = 
+      case_when(
+        avg_rating >= median(avg_rating, na.rm = T) ~ "Above median", 
+        ... = avg_rating < median(avg_rating, na.rm = T) ~ "Below median", 
+        TRUE ~ NA_character_)
+  )
+  
+```
+
+# run the analysis
+
+```{r}
+# fit DiD model for the two groups
+
+# above median
+hte3_a <- 
+  felm(prop_votes_demo ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = df_hte3_analysis_added, subset = group == "Above median")
+
+# below median
+hte3_b <- 
+  felm(prop_votes_demo ~ prop_Yellow|year + fake_unit_id|0|fake_unit_id, 
+       data = df_hte3_analysis_added, subset = group == "Below median")
+```
+
+
+
 # create the df for plotting
 ```{r}
 out <- data.frame(
   # group titles
   subgroup = c("Restaurant density (per 10,000 people)", "Restaurant density (per 10,000 people)",
-               "Historical pro-democracy vote share", "Historical pro-democracy vote share"),
+               "Historical pro-democracy vote share", "Historical pro-democracy vote share",
+               "Mean restaurant rating", "Mean restaurant rating"),
   # subgroup names
-  group = c("Above median", "Below median", "Above median", "Below median"),
+  group = c("Above median", "Below median", 
+            "Above median", "Below median",
+            "Above median", "Below median"),
   # estimates
   coef = c(coef(hte1_a)["prop_Yellow"], coef(hte1_b)["prop_Yellow"],
-           coef(hte2_a)["prop_Yellow"], coef(hte2_b)["prop_Yellow"]),
+           coef(hte2_a)["prop_Yellow"], coef(hte2_b)["prop_Yellow"],
+           coef(hte3_a)["prop_Yellow"], coef(hte3_b)["prop_Yellow"]),
   # standard errors
   se = c(sqrt(diag(vcov(hte1_a))["prop_Yellow"]), sqrt(diag(vcov(hte1_b))["prop_Yellow"]),
-         sqrt(diag(vcov(hte2_a))["prop_Yellow"]), sqrt(diag(vcov(hte2_b))["prop_Yellow"])),
+         sqrt(diag(vcov(hte2_a))["prop_Yellow"]), sqrt(diag(vcov(hte2_b))["prop_Yellow"]),
+         sqrt(diag(vcov(hte3_a))["prop_Yellow"]), sqrt(diag(vcov(hte3_b))["prop_Yellow"])),
   # p-value
   pvalue = c(summary(hte1_a)$coefficients["prop_Yellow", "Pr(>|t|)"],
              summary(hte1_b)$coefficients["prop_Yellow", "Pr(>|t|)"],
              summary(hte2_a)$coefficients["prop_Yellow", "Pr(>|t|)"],
-             summary(hte2_b)$coefficients["prop_Yellow", "Pr(>|t|)"]),
+             summary(hte2_b)$coefficients["prop_Yellow", "Pr(>|t|)"],
+             summary(hte3_a)$coefficients["prop_Yellow", "Pr(>|t|)"],
+             summary(hte3_b)$coefficients["prop_Yellow", "Pr(>|t|)"]),
   # sample size
   N = c(hte1_a$N, hte1_b$N,
-        hte2_a$N, hte2_b$N),
+        hte2_a$N, hte2_b$N,
+        hte3_a$N, hte3_b$N),
   
   # 95% CI
   lower = c(tidy(hte1_a, conf.int = TRUE)$conf.low, tidy(hte1_b, conf.int = TRUE)$conf.low,
-            tidy(hte2_a, conf.int = TRUE)$conf.low, tidy(hte2_b, conf.int = TRUE)$conf.low),
+            tidy(hte2_a, conf.int = TRUE)$conf.low, tidy(hte2_b, conf.int = TRUE)$conf.low,
+            tidy(hte3_a, conf.int = TRUE)$conf.low, tidy(hte3_b, conf.int = TRUE)$conf.low),
   
   upper = c(tidy(hte1_a, conf.int = TRUE)$conf.high, tidy(hte1_b, conf.int = TRUE)$conf.high,
-            tidy(hte2_a, conf.int = TRUE)$conf.high, tidy(hte2_b, conf.int = TRUE)$conf.high)
+            tidy(hte2_a, conf.int = TRUE)$conf.high, tidy(hte2_b, conf.int = TRUE)$conf.high,
+            tidy(hte3_a, conf.int = TRUE)$conf.high, tidy(hte3_b, conf.int = TRUE)$conf.high)
 )
 
 ```
@@ -647,15 +843,15 @@ out <- data.frame(
 # plot hte
 
 ```{r}
-scaleFUN <- function(x) sprintf("%.4f", x)
+scaleFUN <- function(x) sprintf("%.3f", x)
 
 plt_hte <-
   ggplot(aes(x = coef, y = group), data = out) +
   geom_point(size = 2) +
   geom_errorbarh(aes(xmin = lower, xmax = upper), 
                  size = 0.5, height = 0.2) +
-  geom_vline(xintercept = 0, linetype = 2, color = "darkgrey") +
-  facet_wrap(~ subgroup, scales = "free_y", nrow = 2) +
+  geom_vline(xintercept = 0, linetype = 2, color = "grey") +
+  facet_wrap(~ subgroup, scales = "free_y", nrow = 3) +
   geom_text(aes(x = 0.65, 
                 label = paste0(N, " (p = ", scaleFUN(pvalue), ")")), size = 4, position = position_dodge(0.6)) +
   xlim(c(-1, 1)) +
@@ -664,6 +860,7 @@ plt_hte <-
   theme(
     axis.text = element_text(size = 12),
     strip.text = element_text(size = 12),
+    #strip.background = element_rect(fill = "darkgrey"),
     axis.title.x = element_text(size = 12)) 
 ```
 
